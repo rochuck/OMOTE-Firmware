@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 // Only activate the commands that are used. Every command takes 100 bytes, wether used or not.
 extern uint16_t MARANTZ_INPUT_DVD;
 extern uint16_t MARANTZ_INPUT_DTV;
@@ -13,7 +15,7 @@ extern uint16_t MARANTZ_INPUT_DTV;
 // extern uint16_t MARANTZ_PRESETGROUP;
 // extern uint16_t MARANTZ_PRESETSTATION_MINUS;
 // extern uint16_t MARANTZ_PRESETSTATION_PLUS;
-extern uint16_t MARANTZ_STANDARD;
+extern uint16_t MARANTZ_SDIRECT;
 // extern uint16_t MARANTZ_5CHSTEREO;
 // extern uint16_t MARANTZ_NIGHT;
 // extern uint16_t MARANTZ_SLEEP;
@@ -33,4 +35,5 @@ extern uint16_t MARANTZ_MUTE_TOGGLE;
 extern uint16_t MARANTZ_POWER_OFF;
 extern uint16_t MARANTZ_POWER_ON;
 
-void register_device_marantzAmp();
+void
+register_device_marantzAmp();

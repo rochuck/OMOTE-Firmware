@@ -1,9 +1,18 @@
 # OMOTE - Open Universal Remote - Firmware
 
-![Ubuntu build](https://github.com/OMOTE-Community/OMOTE-Firmware/actions/workflows/build-platformio-ubuntu.yml/badge.svg)
-![Windows Build](https://github.com/OMOTE-Community/OMOTE-Firmware/actions/workflows/build-platformio-windows.yml/badge.svg)
-![MacOS Build](https://github.com/OMOTE-Community/OMOTE-Firmware/actions/workflows/build-platformio-macos.yml/badge.svg)
-[![OMOTE Discord](https://discordapp.com/api/guilds/1138116475559882852/widget.png?style=shield)][link1]
+This is my fork of the OMOTE code.
+My notes are here first....
+
+GUIS - I've used Squareline Studio for some of this stuff, and cherry-picked the output code
+It is a completely manual process, unlike some others I've worked on.
+
+I have backing art on some screens, Squareline Studio generated the code, but the asset files I've used come from the online [image converter](https://lvgl.io/tools/imageconverter)
+
+Even so I've had to modify the code to match the Apple logo asset.  This is probably due to version
+mismatches. LVGL in this build is 8.4.0
+
+
+# ---- original readme follows ---
 
 ## Overview
 

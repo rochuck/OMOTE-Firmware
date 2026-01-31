@@ -1,6 +1,20 @@
 // OMOTE firmware for ESP32
 // 2023-2025 Maximilian Kern, Klaus Musch
 
+/**
+ * @file main.cpp
+ * @brief Main entry and loop for OMOTE firmware.
+ *
+ * Initializes hardware, registers devices, GUIs and scenes, and runs the
+ * main firmware loop. Supports both Arduino (setup/loop) and desktop
+ * platforms (POSIX/Windows) where `main()` simulates the Arduino loop.
+ *
+ * Typical responsibilities:
+ * - hardware initialization (TFT, I2C, SD, battery)
+ * - device and GUI registration
+ * - periodic tasks (IMU, backlight, keypad, MQTT, status updates)
+ */
+
 #include "applicationInternal/omote_log.h"
 // init hardware and hardware loop
 #include "applicationInternal/hardware/hardwarePresenter.h"
@@ -57,11 +71,28 @@
 #include "scenes/scene_fireTV.h"
 
 #if defined(ARDUINO)
+/**
+ * @brief Arduino setup function.
+ *
+ * Performs initialization of hardware, devices, GUIs, scenes and
+ * peripherals. This function is called once on Arduino platforms.
+ */
 // in case of Arduino we have a setup() and a loop()
 void
 setup() {
 
 #elif defined(WIN32) || defined(__linux__) || defined(__APPLE__)
+/**
+ * @brief Desktop `main` entry point (Windows/Linux/macOS).
+ *
+ * For non-Arduino platforms we provide a standard `main()` which performs
+ * the same initialization as `setup()` and then repeatedly calls
+ * `loop()` to simulate the Arduino runtime.
+ *
+ * @param argc Argument count.
+ * @param argv Argument vector.
+ * @return int Exit status (this firmware typically does not return).
+ */
 // in case of Windows/Linux, we have only a main() function, no setup() and loop(), so we have to simulate them
 // forward declaration of loop()
 void
@@ -191,9 +222,16 @@ main(int argc, char* argv[]) {
 #endif
 }
 
-// Loop
+#// Loop
 // ------------------------------------------------------------------------------------------------------------------------------------
 #if defined(ARDUINO)
+/**
+ * @brief Arduino main loop.
+ *
+ * This function is called repeatedly by the Arduino runtime. It updates
+ * backlight, keypad, IR receiver, GUI, MQTT and performs periodic tasks
+ * such as IMU and status updates.
+ */
 unsigned long  IMUTaskTimer       = 0;
 unsigned long  updateStatusTimer  = 0;
 unsigned long* pIMUTaskTimer      = &IMUTaskTimer;
@@ -201,6 +239,15 @@ unsigned long* pUpdateStatusTimer = &updateStatusTimer;
 void
 loop() {
 #elif defined(WIN32) || defined(__linux__) || defined(__APPLE__)
+/**
+ * @brief Simulated loop for desktop platforms.
+ *
+ * On desktop builds `main()` calls this function repeatedly. The parameters
+ * are pointers to the timers used for periodic IMU and status updates.
+ *
+ * @param pIMUTaskTimer Pointer to the IMU task timer variable.
+ * @param pUpdateStatusTimer Pointer to the update status timer variable.
+ */
 void
 loop(unsigned long* pIMUTaskTimer, unsigned long* pUpdateStatusTimer) {
 #endif
