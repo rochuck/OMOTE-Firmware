@@ -53,23 +53,23 @@ register_device_marantzAmp() {
     // register_command(&MARANTZ_PRESETGROUP         , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA148B7"}));
     // register_command(&MARANTZ_PRESETSTATION_MINUS , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA18877"}));
     // register_command(&MARANTZ_PRESETSTATION_PLUS  , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA108F7"}));
-    register_command(&MARANTZ_SDIRECT, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0xC22"})); // c22 and 422
+    register_command(&MARANTZ_SDIRECT, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x422"})); // c22 and 422
     // register_command(&MARANTZ_5CHSTEREO           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1E916"}));
     // register_command(&MARANTZ_NIGHT               , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1A956"}));
     // register_command(&MARANTZ_SLEEP               , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1EA15"}));
     // register_command(&MARANTZ_TEST                , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1A15E"}));
     // register_command(&MARANTZ_STRAIGHT            , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA16A95"}));
-    register_command(&MARANTZ_VOL_MINUS, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0xC10"}));
-    register_command(&MARANTZ_VOL_PLUS, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0xC11"}));
+    register_command(&MARANTZ_VOL_MINUS, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x410"}));
+    register_command(&MARANTZ_VOL_PLUS, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x411"}));
     // register_command(&MARANTZ_PROG_MINUS          , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA19A65"}));
     // register_command(&MARANTZ_PROG_PLUS           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA11AE5"}));
-    register_command(&MARANTZ_MUTE_TOGGLE, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0xC0D"}));
+    register_command(&MARANTZ_MUTE_TOGGLE, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x40D"}));
     // register_command(&MARANTZ_LEVEL               , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1619E"}));
     // register_command(&MARANTZ_SETMENU             , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA139C6"}));
     // register_command(&MARANTZ_SETMENU_UP          , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA119E6"}));
     // register_command(&MARANTZ_SETMENU_DOWN        , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA19966"}));
     // register_command(&MARANTZ_SETMENU_MINUS       , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1CA35"}));
     // register_command(&MARANTZ_SETMENU_PLUS        , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA14AB5"}));
-    register_command(&MARANTZ_POWER_OFF, makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA17887"}));
-    register_command(&MARANTZ_POWER_ON, makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1B847"}));
+    register_command(&MARANTZ_POWER_OFF, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x14c"}));
+    register_command(&MARANTZ_POWER_ON, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x14c"}));
 }
