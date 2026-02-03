@@ -1,5 +1,7 @@
+/* this has been hacked to used the hdhomerun app in apple tv*/
+
 #include <map>
-#include "scenes/scene_TV.h"
+#include "scenes/scene_HDHR.h"
 #include "applicationInternal/keys.h"
 #include "applicationInternal/scenes/sceneRegistry.h"
 #include "applicationInternal/hardware/hardwarePresenter.h"
@@ -66,7 +68,7 @@ void scene_end_sequence_TV(void) {
 
 }
 
-std::string scene_name_TV = "TV";
+std::string scene_name_TV = "TV HDHOMERUN";
 t_gui_list scene_TV_gui_list = {tabName_numpad};
 
 void register_scene_TV(void) {

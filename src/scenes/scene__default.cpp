@@ -7,7 +7,7 @@
 #include "devices/misc/device_smarthome/gui_smarthome.h"
 // scenes
 #include "scene__default.h"
-#include "scenes/scene_TV.h"
+#include "scenes/scene_HDHR.h"
 #include "scenes/scene_allOff.h"
 #include "scenes/scene_appleTV.h"
 #include "scenes/scene_chromecast.h"

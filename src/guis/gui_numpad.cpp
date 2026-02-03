@@ -7,7 +7,7 @@
 
 #include "applicationInternal/commandHandler.h"
 #include "applicationInternal/scenes/sceneHandler.h"
-#include "scenes/scene_TV.h"
+#include "scenes/scene_HDHR.h"
 #include "scenes/scene_fireTV.h"
 #include "devices/TV/device_samsungTV/device_samsungTV.h"
 
