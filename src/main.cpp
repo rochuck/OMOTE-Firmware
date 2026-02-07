@@ -52,12 +52,14 @@
 #include "applicationInternal/gui/guiRegistry.h"
 #include "devices/AVreceiver/device_marantzAmp/gui_marantzAmp.h"
 #include "devices/mediaPlayer/device_appleTV/gui_appleTV.h"
+#include "devices/mediaPlayer/device_hdhomerun/gui_hdhomerun.h"
 #include "devices/misc/device_smarthome/gui_smarthome.h"
 #include "guis/gui_BLEpairing.h"
 #include "guis/gui_irReceiver.h"
 #include "guis/gui_numpad.h"
 #include "guis/gui_sceneSelection.h"
 #include "guis/gui_settings.h"
+#include "guis/gui_t9.h"
 // #include "devices/misc/device_airconditioner/gui_airconditioner.h"
 #include "applicationInternal/gui/guiStatusUpdate.h"
 #include "applicationInternal/keys.h"
@@ -156,12 +158,15 @@ main(int argc, char* argv[]) {
     register_gui_settings();
     register_gui_appleTV();
     register_gui_numpad();
+    register_gui_t9();
+
 #if (ENABLE_KEYBOARD_BLE == 1)
     register_gui_blepairing();
 #endif
     register_gui_smarthome();
     // register_gui_airconditioner();
     register_gui_marantzAmp();
+    register_gui_hdhomerun();
 // Only show these GUIs in the main gui list. If you don't set this explicitely, by default all registered guis are shown.
 #if (USE_SCENE_SPECIFIC_GUI_LIST != 0)
     main_gui_list = {tabName_marantzAmp,

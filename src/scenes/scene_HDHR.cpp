@@ -6,11 +6,14 @@
 #include "applicationInternal/scenes/sceneRegistry.h"
 #include "applicationInternal/hardware/hardwarePresenter.h"
 // devices
-#include "devices/TV/device_samsungTV/device_samsungTV.h"
-#include "devices/AVreceiver/device_yamahaAmp/device_yamahaAmp.h"
+#include "devices/TV/device_sharpTV/device_sharpTV.h"
+#include "devices/AVreceiver/device_marantzAmp/device_marantzAmp.h"
 #include "applicationInternal/commandHandler.h"
 // guis
 #include "guis/gui_numpad.h"
+#include "guis/gui_t9.h"
+#include "devices/mediaPlayer/device_hdhomerun/gui_hdhomerun.h"
+#include "devices/mediaPlayer/device_appleTV/gui_appleTV.h"
 
 uint16_t SCENE_TV         ; //"Scene_tv"
 uint16_t SCENE_TV_FORCE   ; //"Scene_tv_force"
@@ -35,14 +38,14 @@ void scene_setKeys_TV() {
   
   key_commands_short_TV = {
   
-    {KEY_STOP,  SAMSUNG_PAUSE    },    {KEY_REWI,  SAMSUNG_REWIND   },    {KEY_PLAY,  SAMSUNG_PLAY     },    {KEY_FORW,  SAMSUNG_FASTFORWARD},
-    {KEY_CONF,  SAMSUNG_GUIDE    },                                                                          {KEY_INFO,  SAMSUNG_MENU     },
-                                                         {KEY_UP,    SAMSUNG_UP       },
-                      {KEY_LEFT,  SAMSUNG_LEFT    },     {KEY_OK,    SAMSUNG_SELECT   },    {KEY_RIGHT, SAMSUNG_RIGHT    },
-                                                         {KEY_DOWN,  SAMSUNG_DOWN     },
-                                                                                                             {KEY_SRC,   SAMSUNG_EXIT     },
-                                                                                                             {KEY_CHUP,  SAMSUNG_CHANNEL_UP},
-                                                                                                             {KEY_CHDOW, SAMSUNG_CHANNEL_DOWN},
+    {KEY_STOP,  SHARP_PAUSE    },    {KEY_REWI,  SHARP_REWIND   },    {KEY_PLAY,  SHARP_PLAY     },    {KEY_FORW,  SHARP_FASTFORWARD},
+    {KEY_CONF,  SHARP_GUIDE    },                                                                          {KEY_INFO,  SHARP_MENU     },
+                                                         {KEY_UP,    SHARP_UP       },
+                      {KEY_LEFT,  SHARP_LEFT    },     {KEY_OK,    SHARP_SELECT   },    {KEY_RIGHT, SHARP_RIGHT    },
+                                                         {KEY_DOWN,  SHARP_DOWN     },
+                                                                                                             {KEY_SRC,   SHARP_EXIT     },
+                                                                                                             {KEY_CHUP,  SHARP_CHANNEL_UP},
+                                                                                                             {KEY_CHDOW, SHARP_CHANNEL_DOWN},
   
   };
   
@@ -54,13 +57,13 @@ void scene_setKeys_TV() {
 }
 
 void scene_start_sequence_TV(void) {
-  executeCommand(SAMSUNG_POWER_ON);
+  executeCommand(SHARP_POWER_ON);
   delay(500);
-  executeCommand(YAMAHA_POWER_ON);
+  executeCommand(MARANTZ_POWER_ON);
   delay(1500);
-  executeCommand(YAMAHA_INPUT_DVD);
+  executeCommand(MARANTZ_INPUT_DVD);
   delay(3000);
-  executeCommand(SAMSUNG_INPUT_TV);
+  executeCommand(SHARP_INPUT_HDMI_1);
 
 }
 
@@ -69,7 +72,8 @@ void scene_end_sequence_TV(void) {
 }
 
 std::string scene_name_TV = "TV HDHOMERUN";
-t_gui_list scene_TV_gui_list = {tabName_numpad};
+//t_gui_list scene_TV_gui_list = {tabName_hdhomerun};
+t_gui_list scene_TV_gui_list = {tabName_t9};
 
 void register_scene_TV(void) {
   register_command(&SCENE_TV,       makeCommandData(SCENE, {scene_name_TV}));

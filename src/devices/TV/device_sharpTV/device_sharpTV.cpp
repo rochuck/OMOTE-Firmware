@@ -58,7 +58,9 @@ uint16_t SHARP_POWER_ON        ; //"Sharp_power_on";
 uint16_t SHARP_INPUT_HDMI_1    ; //"Sharp_input_hdmi_1";
 uint16_t SHARP_INPUT_HDMI_2    ; //"Sharp_input_hdmi_2";
 uint16_t SHARP_INPUT_HDMI_3    ; //"Sharp_input_hdmi_3";
-// uint16_t SHARP_INPUT_HDMI_4    ; //"Sharp_input_hdmi_4";
+uint16_t SHARP_INPUT_HDMI_4    ; //"Sharp_input_hdmi_4";
+uint16_t SHARP_INPUT_HDMI_5    ; //"Sharp_input_hdmi_5";
+
 // uint16_t SHARP_INPUT_COMPONENT ; //"Sharp_input_component";
 uint16_t SHARP_INPUT_TV        ; //"Sharp_input_tv";
 

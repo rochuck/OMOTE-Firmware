@@ -42,7 +42,7 @@ create_tab_content_marantzAmp(lv_obj_t* tab) {
     lv_obj_add_event_cb(button, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 0);
 
     lv_obj_t* label = lv_label_create(button);
-    lv_label_set_text(label, "Standard");
+    lv_label_set_text(label, "S. Direct");
     lv_obj_center(label);
 }
 
