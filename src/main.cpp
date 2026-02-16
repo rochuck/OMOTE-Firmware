@@ -212,6 +212,7 @@ main(int argc, char* argv[]) {
     init_IMU();
 
 // init WiFi - needs to be after init_gui() because WifiLabel must be available
+// this call will also init websockets to home assistant
 #if (ENABLE_WIFI_AND_MQTT == 1)
     init_mqtt();
 #endif

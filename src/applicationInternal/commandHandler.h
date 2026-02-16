@@ -1,11 +1,11 @@
 #pragma once
 
-#include <string>
 #include <list>
 #include <map>
+#include <string>
 
-#include "devices/keyboard/device_keyboard_mqtt/device_keyboard_mqtt.h"
 #include "devices/keyboard/device_keyboard_ble/device_keyboard_ble.h"
+#include "devices/keyboard/device_keyboard_mqtt/device_keyboard_mqtt.h"
 
 extern uint16_t COMMAND_UNKNOWN;
 
@@ -18,7 +18,8 @@ extern uint16_t COMMAND_UNKNOWN;
   If none of them is enabled, then KEYBOARD_UP will be the same as KEYBOARD_UP_DUMMY
   Doing so you can switch between the keyboards without changing the UI code (keys.cpp, gui*.cpp and commandHandler.cpp)
   If you need something different than this behaviour, then you can change the code in 'register_keyboardCommands()'
-  or you can of course change keys.cpp, gui*.cpp and commandHandler.cpp so that they directly use KEYBOARD_BLE_UP or KEYBOARD_MQTT_UP etc.
+  or you can of course change keys.cpp, gui*.cpp and commandHandler.cpp so that they directly use KEYBOARD_BLE_UP or
+  KEYBOARD_MQTT_UP etc.
 */
 
 extern uint16_t KEYBOARD_DUMMY_UP;
@@ -42,14 +43,14 @@ extern uint16_t KEYBOARD_DUMMY_VOLUME_INCREMENT;
 extern uint16_t KEYBOARD_DUMMY_VOLUME_DECREMENT;
 
 #if (ENABLE_KEYBOARD_BLE == 1)
-  #define KEYBOARD_PREFIX KEYBOARD_BLE_
+#define KEYBOARD_PREFIX KEYBOARD_BLE_
 #elif (ENABLE_KEYBOARD_MQTT == 1)
-  #define KEYBOARD_PREFIX KEYBOARD_MQTT_
+#define KEYBOARD_PREFIX KEYBOARD_MQTT_
 #else
-  // Of course keyboard commands will not work if neither BLE nor MQTT keyboard is enabled, but at least code will compile.
-  // But you have to change keys.cpp, gui_numpad.cpp and commandHandler.cpp where keyboard commands are used so that a command can be executed successfully.
-  // Search for "executeCommand(Key" to find them.
-  #define KEYBOARD_PREFIX KEYBOARD_DUMMY_
+// Of course keyboard commands will not work if neither BLE nor MQTT keyboard is enabled, but at least code will compile.
+// But you have to change keys.cpp, gui_numpad.cpp and commandHandler.cpp where keyboard commands are used so that a command can be
+// executed successfully. Search for "executeCommand(Key" to find them.
+#define KEYBOARD_PREFIX KEYBOARD_DUMMY_
 #endif
 
 extern uint16_t KEYBOARD_UP;
@@ -82,7 +83,7 @@ extern uint16_t KEYBOARD_VOLUME_DECREMENT;
 //  * Concatenate preprocessor tokens A and B after macro-expanding them.
 //  */
 // #define PPCAT(A, B) PPCAT_NX(A, B)
-// 
+//
 // Test
 // https://stackoverflow.com/questions/5256313/c-c-macro-string-concatenation
 // #define STR(x) #x
@@ -92,39 +93,51 @@ extern uint16_t KEYBOARD_VOLUME_DECREMENT;
 // #pragma message "3 The value is: " XSTR(KEYBOARD_UP)
 
 enum commandHandlers {
-  SPECIAL,
-  SCENE,
-  GUI,
-  IR,
-  #if (ENABLE_WIFI_AND_MQTT == 1)
-  MQTT,
-  #endif
-  #if (ENABLE_KEYBOARD_BLE == 1)
-  BLE_KEYBOARD,
-  #endif
+    SPECIAL,
+    SCENE,
+    GUI,
+    IR,
+#if (ENABLE_WIFI_AND_MQTT == 1)
+    MQTT,
+#if (ENABLE_WEBSOCKET == 1)
+    WS,
+#endif
+#endif
+#if (ENABLE_KEYBOARD_BLE == 1)
+    BLE_KEYBOARD,
+#endif
 };
 
 struct commandData {
-  commandHandlers commandHandler;
-  std::list<std::string> commandPayloads;
+    commandHandlers        commandHandler;
+    std::list<std::string> commandPayloads;
 };
 
 // register a command and give it a command id
-void register_command(uint16_t *command, commandData aCommandData);
+void
+register_command(uint16_t* command, commandData aCommandData);
 // only get a unique ID. used by KEYBOARD_DUMMY and COMMAND_UNKNOWN
-void get_uniqueCommandID(uint16_t *command);
+void
+get_uniqueCommandID(uint16_t* command);
 
-void register_keyboardCommands();
-commandData makeCommandData(commandHandlers a, std::list<std::string> b);
-void executeCommand(uint16_t command, std::string additionalPayload = "");
+void
+register_keyboardCommands();
+commandData
+makeCommandData(commandHandlers a, std::list<std::string> b);
+void
+executeCommand(uint16_t command, std::string additionalPayload = "");
 
-void receiveNewIRmessage_cb(std::string message);
+void
+receiveNewIRmessage_cb(std::string message);
 #if (ENABLE_KEYBOARD_BLE == 1)
 // used as callback from hardware
-void receiveBLEmessage_cb(std::string message);
+void
+receiveBLEmessage_cb(std::string message);
 #endif
 #if (ENABLE_WIFI_AND_MQTT == 1)
 // used as callbacks from hardware
-void receiveWiFiConnected_cb(bool connected);
-void receiveMQTTmessage_cb(std::string topic, std::string payload);
+void
+receiveWiFiConnected_cb(bool connected);
+void
+receiveMQTTmessage_cb(std::string topic, std::string payload);
 #endif
