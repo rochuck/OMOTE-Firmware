@@ -273,6 +273,7 @@ loop(unsigned long* pIMUTaskTimer, unsigned long* pUpdateStatusTimer) {
 // call mqtt loop to receive mqtt messages, if you are subscribed to some topics
 #if (ENABLE_WIFI_AND_MQTT == 1)
     mqtt_loop();
+
 #endif
 
     // --- every 100 ms -------------------------------------------------------------------

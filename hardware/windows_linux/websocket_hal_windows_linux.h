@@ -12,12 +12,10 @@ websocket_isConnected_HAL();
 void
 websocket_loop_HAL();
 bool
-websocket_send_HAL(const char* topic, const char* payload);
-void
-websocket_sub_HAL(const char* entity_list);
+websocket_send_HAL(const char* payload);
 void
 websocket_shutdown_HAL();
 
-typedef void (*tAnnounceWebsocketMessage_cb)(const std::string message);
+typedef void (*tAnnounceWebsocketMessage_cb)(const std::string& message);
 void
 set_announceWebsocketMessage_cb_HAL(tAnnounceWebsocketMessage_cb cb);

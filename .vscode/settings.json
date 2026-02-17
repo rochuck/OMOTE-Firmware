@@ -53,5 +53,5 @@
     },
     "cmake.sourceDirectory": "${workspaceFolder}/.pio/libdeps/esp32/Adafruit BusIO",
     "editor.formatOnSave": true,
-    "search.useIgnoreFiles": false
+    "search.useIgnoreFiles": true
 }

@@ -15,6 +15,10 @@
 // show received BLE connection messages
 #include "guis/gui_BLEpairing.h"
 
+// to me this seems hacky, but include the home automation device here
+// so we can subscribe to the correct web socket messages
+#include "devices/misc/device_smarthome/gui_smarthome.h"
+
 uint16_t COMMAND_UNKNOWN;
 
 uint16_t KEYBOARD_DUMMY_UP;                  //"Keyboard_dummy_up"
@@ -227,7 +231,7 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
             payload = additionalPayload;
         }
         omote_log_d("execute: will send WS, topic '%s', payload '%s'\r\n", topic.c_str(), payload.c_str());
-        // publishMQTTMessage(topic.c_str(), payload.c_str());
+        send_websocket_message(topic.c_str(), payload.c_str());
         break;
     }
 #endif
@@ -270,7 +274,6 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
 
 void
 executeCommand(uint16_t command, std::string additionalPayload) {
-    omote_log_w("command: command '%u' not found\r\n", command);
     try {
         if (commands.count(command) > 0) {
             omote_log_d("command: will execute command '%u' with additionalPayload '%s'\r\n", command, additionalPayload.c_str());
@@ -316,6 +319,17 @@ receiveWiFiConnected_cb(bool connected) {
 #endif
     }
 }
+
+#if (ENABLE_WEBSOCKET == 1)
+
+void
+receiveWSmessage_cb(std::string message) {
+    // todo call into the smart home gui to update the status of the smart home device based on the received message
+    omote_log_d("received websocket message: '%s'\r\n", message.c_str());
+    handle_HA_websocket_message(message);
+}
+#endif
+
 void
 receiveMQTTmessage_cb(std::string topic, std::string payload) {
     showMQTTmessage(topic, payload);

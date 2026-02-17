@@ -339,13 +339,27 @@ void
 wifi_shutdown() {
     wifi_shutdown_HAL();
 }
-#endif
+#if (ENABLE_WEBSOCKET == 1)
+
 void
 init_websocket(void) {
-//    set_announceWebsocketMessage_cb_HAL(receiveWebsocketMessage_cb);
+    // make sure the smart home device can receive the connect message
+    // and status messages.  during the connect message we register
+    // for the all the ha device events.
+    set_announceWebsocketMessage_cb_HAL(receiveWSmessage_cb);
     init_websocket_HAL();
 }
-
+#endif
+#endif
+bool
+send_websocket_message(const char* topic, const char* payload) {
+    return websocket_send_HAL(topic, payload);
+}
+bool
+websocket_sub(const char* entity_list) {
+    websocket_sub_HAL(entity_list);
+    return false;
+}
 // --- memory usage -----------------------------------------------------------
 void
 get_heapUsage(unsigned long* heapSize, unsigned long* freeHeap, unsigned long* maxAllocHeap, unsigned long* minFreeHeap) {

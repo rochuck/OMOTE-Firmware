@@ -140,4 +140,9 @@ void
 receiveWiFiConnected_cb(bool connected);
 void
 receiveMQTTmessage_cb(std::string topic, std::string payload);
+#if (ENABLE_WEBSOCKET == 1)
+void
+receiveWSmessage_cb(std::string message);
+#endif
+
 #endif

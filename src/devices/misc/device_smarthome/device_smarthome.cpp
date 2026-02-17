@@ -25,10 +25,8 @@ register_device_smarthome() {
     register_command(&SMARTHOME_MQTT_BULB2_BRIGHTNESS_SET,
                      makeCommandData(MQTT, {"bulb2_setbrightness"})); // payload must be set when calling commandHandler
 #if (ENABLE_WEBSOCKET == 1)
-    register_command(&SMARTHOME_WS_LIGHT_ON,
-                     makeCommandData(WS, {"light_toggle"})); // payload must be set when calling commandHandler
-    register_command(&SMARTHOME_WS_LIGHT_OFF,
-                     makeCommandData(WS, {"light_toggle"})); // payload must be set when calling commandHandler
+    register_command(&SMARTHOME_WS_LIGHT_ON, makeCommandData(WS, {"turn_on"}));   // payload must be set when calling commandHandler
+    register_command(&SMARTHOME_WS_LIGHT_OFF, makeCommandData(WS, {"turn_off"})); // payload must be set when calling commandHandler
     register_command(&SMARTHOME_WS_LIGHT_BRIGHTNESS,
                      makeCommandData(WS, {"light_brightness"})); // payload must be set when calling commandHandler
 

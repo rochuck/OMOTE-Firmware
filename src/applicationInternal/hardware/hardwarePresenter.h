@@ -206,6 +206,10 @@ wifi_shutdown();
 #if (ENABLE_WEBSOCKET == 1)
 void
 init_websocket(void);
+bool
+send_websocket_message(const char* topic, const char* payload);
+bool
+websocket_sub(const char* entity_list);
 #endif
 
 // --- memory usage -----------------------------------------------------------

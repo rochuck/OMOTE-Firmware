@@ -1,0 +1,4 @@
+# .github/copilot-exclude.yml
+- "secrets*.h"
+- "**/secrets/**"
+- "**/*.env"
