@@ -142,7 +142,7 @@ void
 receiveMQTTmessage_cb(std::string topic, std::string payload);
 #if (ENABLE_WEBSOCKET == 1)
 void
-receiveWSmessage_cb(std::string message);
+receiveWSmessage_cb(const std::string &message);
 #endif
 
 #endif

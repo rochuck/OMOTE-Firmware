@@ -16,16 +16,6 @@
 // LVGL declarations
 LV_IMG_DECLARE(lightbulb);
 
-static lv_obj_t* lightToggleA; // Computer Floor Lamp
-static lv_obj_t* lightToggleB;
-static lv_obj_t* sliderA;
-static lv_obj_t* sliderB;
-
-static bool    lightToggleAstate = false;
-static bool    lightToggleBstate = false;
-static int32_t sliderAvalue      = 0;
-static int32_t sliderBvalue      = 0;
-
 uint16_t GUI_SMARTHOME_ACTIVATE;
 
 std::map<char, repeatModes> key_repeatModes_smarthome    = {};
@@ -92,6 +82,8 @@ smartHomeToggle_event_cb(lv_event_t* e) {
     std::string  payload;
     const char*  friendly_name = (const char*) (e->user_data);
     entity_item* e_item        = friendly_map[friendly_name];
+
+    omote_log_d("switch callback\r\n");
 
     if (e_item == NULL) { return; }
 
@@ -160,8 +152,6 @@ smartHomeSlider_event_cb(lv_event_t* e) {
 void
 create_tab_content_smarthome(lv_obj_t* tab) {
 
-    init_entity_maps();
-
     // Add content to the smart home tab
     lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_COLUMN);
@@ -189,16 +179,13 @@ create_tab_content_smarthome(lv_obj_t* tab) {
     lv_label_set_text(menuLabel, e->label); //"Computer Floor\nLamp");
     lv_obj_align(menuLabel, LV_ALIGN_TOP_LEFT, 22, 3);
     e->lv_switch = lv_switch_create(menuBox);
-    if (lightToggleAstate) {
-        lv_obj_add_state(e->lv_switch, LV_STATE_CHECKED);
-    } else {
-        // lv_obj_clear_state(lightToggleA, LV_STATE_CHECKED);
-    }
+
     lv_obj_set_size(e->lv_switch, 40, 22);
     lv_obj_align(e->lv_switch, LV_ALIGN_TOP_RIGHT, 0, 0);
     lv_obj_set_style_bg_color(e->lv_switch, lv_color_lighten(color_primary, 50), LV_PART_MAIN);
     lv_obj_set_style_bg_color(e->lv_switch, color_primary, LV_PART_INDICATOR);
-    lv_obj_add_event_cb(e->lv_switch, smartHomeToggle_event_cb, LV_EVENT_VALUE_CHANGED, (void*) "lrfl_comp");
+    if (e->state) { lv_obj_add_state(e->lv_switch, LV_STATE_CHECKED); }
+    lv_obj_add_event_cb(e->lv_switch, smartHomeToggle_event_cb, LV_EVENT_VALUE_CHANGED, (void*) e->friendly_name);
 
     e->lv_slider = lv_slider_create(menuBox);
     lv_slider_set_range(e->lv_slider, 0, 255);
@@ -211,7 +198,8 @@ create_tab_content_smarthome(lv_obj_t* tab) {
     lv_slider_set_value(e->lv_slider, e->brightness, LV_ANIM_OFF);
     lv_obj_set_size(e->lv_slider, lv_pct(90), 10);
     lv_obj_align(e->lv_slider, LV_ALIGN_TOP_MID, 0, 37);
-    lv_obj_add_event_cb(e->lv_slider, smartHomeSlider_event_cb, LV_EVENT_VALUE_CHANGED, (void*) "lrfl_comp");
+    lv_slider_set_value(e->lv_slider, e->brightness, LV_ANIM_OFF);
+    lv_obj_add_event_cb(e->lv_slider, smartHomeSlider_event_cb, LV_EVENT_VALUE_CHANGED, (void*) e->friendly_name);
 
     // Add another menu box for a second appliance
     menuBox = lv_obj_create(tab);
@@ -229,19 +217,16 @@ create_tab_content_smarthome(lv_obj_t* tab) {
     e = friendly_map["lrfl_piano"];
 
     menuLabel = lv_label_create(menuBox);
-    lv_label_set_text(menuLabel, e->friendly_name); //"Piano Lamp"
+    lv_label_set_text(menuLabel, e->label); //"Piano Lamp"
     lv_obj_align(menuLabel, LV_ALIGN_TOP_LEFT, 22, 3);
     e->lv_switch = lv_switch_create(menuBox);
-    if (lightToggleBstate) {
-        lv_obj_add_state(e->lv_switch, LV_STATE_CHECKED);
-    } else {
-        // lv_obj_clear_state(lightToggleB, LV_STATE_CHECKED);
-    }
+
     lv_obj_set_size(e->lv_switch, 40, 22);
     lv_obj_align(e->lv_switch, LV_ALIGN_TOP_RIGHT, 0, 0);
     lv_obj_set_style_bg_color(e->lv_switch, lv_color_lighten(color_primary, 50), LV_PART_MAIN);
     lv_obj_set_style_bg_color(e->lv_switch, color_primary, LV_PART_INDICATOR);
-    lv_obj_add_event_cb(e->lv_switch, smartHomeToggle_event_cb, LV_EVENT_VALUE_CHANGED, (void*) "lrfl_piano");
+    if (e->state) { lv_obj_add_state(e->lv_switch, LV_STATE_CHECKED); }
+    lv_obj_add_event_cb(e->lv_switch, smartHomeToggle_event_cb, LV_EVENT_VALUE_CHANGED, (void*) e->friendly_name);
 
     e->lv_slider = lv_slider_create(menuBox);
     lv_slider_set_range(e->lv_slider, 0, 255);
@@ -254,7 +239,8 @@ create_tab_content_smarthome(lv_obj_t* tab) {
     lv_slider_set_value(e->lv_slider, e->brightness, LV_ANIM_OFF);
     lv_obj_set_size(e->lv_slider, lv_pct(90), 10);
     lv_obj_align(e->lv_slider, LV_ALIGN_TOP_MID, 0, 37);
-    lv_obj_add_event_cb(e->lv_slider, smartHomeSlider_event_cb, LV_EVENT_VALUE_CHANGED, (void*) "lrfl_piano");
+    lv_slider_set_value(e->lv_slider, e->brightness, LV_ANIM_OFF);
+    lv_obj_add_event_cb(e->lv_slider, smartHomeSlider_event_cb, LV_EVENT_VALUE_CHANGED, (void*) e->friendly_name);
 
     // Add another room (empty for now)
     menuLabel = lv_label_create(tab);
@@ -270,10 +256,6 @@ void
 notify_tab_before_delete_smarthome(void) {
     // remember to set all pointers to lvgl objects to NULL if they might be accessed from outside.
     // They must check if object is NULL and must not use it if so
-    lightToggleAstate = lv_obj_has_state(lightToggleA, LV_STATE_CHECKED);
-    lightToggleBstate = lv_obj_has_state(lightToggleB, LV_STATE_CHECKED);
-    sliderAvalue      = lv_slider_get_value(sliderA);
-    sliderBvalue      = lv_slider_get_value(sliderB);
 }
 
 void
@@ -296,6 +278,9 @@ register_gui_smarthome(void) {
 
     register_command(&GUI_SMARTHOME_ACTIVATE,
                      makeCommandData(GUI, {std::to_string(MAIN_GUI_LIST), std::string(tabName_smarthome)}));
+
+    // Setup our entities, and data that should persist if we navigate away from the screen
+    init_entity_maps();
 }
 
 void

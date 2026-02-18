@@ -25,7 +25,16 @@ static std::mutex        ws_send_mutex;
 static std::atomic<bool> ws_running(false);
 static std::atomic<bool> ws_connected(false);
 
+static const char*                  TAG                             = "HA_WS";
+static bool                         is_connected                    = false;
+static bool                         is_subscribed                   = false;
+static uint16_t                     ws_id                           = 1234;
 static tAnnounceWebsocketMessage_cb thisAnnounceWebsocketMessage_cb = NULL;
+
+void
+set_announceWebsocketMessage_cb_HAL(tAnnounceWebsocketMessage_cb cb) {
+    thisAnnounceWebsocketMessage_cb = cb;
+}
 
 static std::string
 host_from_url(const std::string& url, std::string& path, int& port) {
@@ -162,11 +171,6 @@ reader_thread_func() {
 }
 
 void
-set_announceWebsocketMessage_cb_HAL(tAnnounceWebsocketMessage_cb cb) {
-    thisAnnounceWebsocketMessage_cb = cb;
-}
-
-void
 init_websocket_HAL(void) {
     if (ws_running) return;
     std::string path;
@@ -231,7 +235,7 @@ init_websocket_HAL(void) {
     // Send auth message immediately
     char authbuf[1024];
     snprintf(authbuf, sizeof(authbuf), "{\"type\":\"auth\",\"access_token\":\"%s\"}", WS_TOKEN);
-    websocket_send_HAL(authbuf);
+    websocket_send_HAL(authbuf, "payload");
 }
 
 bool
@@ -248,6 +252,19 @@ static uint32_t
 rand32() {
     static std::mt19937 rng((unsigned) time(NULL));
     return rng();
+}
+
+void
+websocket_sub_HAL(const char* entity_list) {
+    if (!is_subscribed) {
+        if (is_connected) {
+            // Subscribe to all events
+            // todo            esp_err_t ret = esp_websocket_client_send_text(client, entity_list, strlen(entity_list),
+            // portMAX_DELAY);
+            //         if (ret >= 0) { printf("Subscribed to entities: %s\n", entity_list); }
+            is_subscribed = true;
+        }
+    }
 }
 
 bool

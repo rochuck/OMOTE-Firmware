@@ -323,7 +323,7 @@ receiveWiFiConnected_cb(bool connected) {
 #if (ENABLE_WEBSOCKET == 1)
 
 void
-receiveWSmessage_cb(std::string message) {
+receiveWSmessage_cb(const std::string &message) {
     // todo call into the smart home gui to update the status of the smart home device based on the received message
     omote_log_d("received websocket message: '%s'\r\n", message.c_str());
     handle_HA_websocket_message(message);
