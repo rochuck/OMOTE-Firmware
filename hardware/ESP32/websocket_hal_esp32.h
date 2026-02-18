@@ -18,6 +18,6 @@ websocket_sub_HAL(const char* entity_list);
 void
 websocket_shutdown_HAL();
 
-typedef void (*tAnnounceWebsocketMessage_cb)(const std::string &message);
+typedef void (*tAnnounceWebsocketMessage_cb)(const std::string& message);
 void
 set_announceWebsocketMessage_cb_HAL(tAnnounceWebsocketMessage_cb cb);

@@ -309,15 +309,12 @@ parseAllEntities(cJSON* root) {
             if (attrs) {
                 cJSON* brightness_json = cJSON_GetObjectItem(attrs, "brightness");
                 if (brightness_json && cJSON_IsNumber(brightness_json)) { brightness = (int) brightness_json->valuedouble; }
+                omote_log_d("Parsing brightness %d %f\r\n", brightness, brightness_json->valuedouble);
             }
             // look up lv objects, based on entity id
             entity_item* e = entity_map[entity_id];
             if (!e) continue; // entity not in our table, ignore
 
-            if (brightness >= 0) {
-                e->brightness = brightness;
-                if (e->lv_slider) { lv_slider_set_value(e->lv_slider, brightness, LV_ANIM_OFF); }
-            }
             if (strcmp(state, "unknown")) { // if we got a value, update it!
                 e->state = (strcmp(state, "on") == 0);
                 if (e->lv_switch) {
@@ -327,9 +324,16 @@ parseAllEntities(cJSON* root) {
                     } else {
                         omote_log_d("Set state off\r\n");
                         lv_obj_clear_state(e->lv_switch, LV_STATE_CHECKED);
+                        brightness = 0; // if state is off, brightness should be 0, even if HA did not send brightness in the event
                     }
                 }
             }
+
+            if (brightness >= 0) {
+                e->brightness = brightness;
+                if (e->lv_slider) { lv_slider_set_value(e->lv_slider, brightness, LV_ANIM_OFF); }
+            }
+
             omote_log_d("Parsing change item %s (%s): %s (%s) %d\r\n",
                         entity_id,
                         e->friendly_name,
@@ -358,23 +362,27 @@ parseAllEntities(cJSON* root) {
                 cJSON* brightness_json = cJSON_GetObjectItem(attrs, "brightness");
                 if (brightness_json && cJSON_IsNumber(brightness_json)) { brightness = (int) brightness_json->valuedouble; }
             }
+
             // look up lv objects, based on entity id
             entity_item* e = entity_map[entity_id];
             if (!e) continue; // entity not in our table, ignore
 
             e->state = (strcmp(state, "on") == 0);
-            if (brightness > -0) {
-                e->brightness = brightness;
-                if (e->lv_slider) { lv_slider_set_value(e->lv_slider, brightness, LV_ANIM_OFF); }
-            }
+
             if (strcmp(state, "unknown")) {
                 if (e->lv_switch) {
                     if (e->state) {
                         lv_obj_add_state(e->lv_switch, LV_STATE_CHECKED);
                     } else {
                         lv_obj_clear_state(e->lv_switch, LV_STATE_CHECKED);
+                        brightness = 0; // if state is off, brightness should be 0, even if HA did not send brightness in the event
                     }
                 }
+            }
+            if (brightness >= 0) {
+                e->brightness = brightness;
+
+                if (e->lv_slider) { lv_slider_set_value(e->lv_slider, brightness, LV_ANIM_OFF); }
             }
             omote_log_d("Parsing  attr item %s: %s(%d) %d\r\n", entity_id, state, e->state, e->brightness);
         }
