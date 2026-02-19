@@ -262,6 +262,19 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
         break;
     }
 
+    case LVGL: {
+
+        omote_log_d("execute: got cmd key'%s'\r\n", convertStringListToString(commandData.commandPayloads).c_str());
+        int num = atoi(commandData.commandPayloads.front().c_str());
+        omote_log_d("execute: got num'%d'\r\n", num);
+
+        // if there is no key, we can put on in the queue. otherwise we ignore this keypress.
+        // this is human speed, so should not be an issue.
+        if (queued_key == 0) { queued_key = num; }
+
+        break;
+    }
+
     case SPECIAL: {
         if (command == MY_SPECIAL_COMMAND) {
             // do your special command here
@@ -323,7 +336,7 @@ receiveWiFiConnected_cb(bool connected) {
 #if (ENABLE_WEBSOCKET == 1)
 
 void
-receiveWSmessage_cb(const std::string &message) {
+receiveWSmessage_cb(const std::string& message) {
     // todo call into the smart home gui to update the status of the smart home device based on the received message
     omote_log_d("received websocket message: '%s'\r\n", message.c_str());
     handle_HA_websocket_message(message);

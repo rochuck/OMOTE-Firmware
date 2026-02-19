@@ -134,6 +134,12 @@ set_motionThreshold(uint8_t aMotionThreshold) {
 }
 
 // --- keypad -----------------------------------------------------------------
+
+// these are where the keypad keys are injected into lvgl
+uint8_t     queued_key         = 0;    // From your software callback
+uint8_t     queued_key_timeout = 0;    // Timeout for the key release
+lv_indev_t* indev_keypad       = NULL; // The keypad driver needed for button nav
+
 void
 init_keys(void) {
     init_keys_HAL();

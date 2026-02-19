@@ -1,5 +1,6 @@
 #pragma once
 #include <list>
+#include <lvgl.h>
 #include <string>
 
 #include "applicationInternal/hardware/IRremoteProtocols.h"
@@ -66,6 +67,13 @@ void
 set_motionThreshold(uint8_t aMotionThreshold);
 
 // --- keypad -----------------------------------------------------------------
+
+// This is defined in the hardware presenter.
+// the keypad driver in the command handler populates these to fake
+// injection into the lvgl keypad driver.
+extern uint8_t     queued_key;         // From your software callback
+extern uint8_t     queued_key_timeout; // Timeout for the key release
+extern lv_indev_t* indev_keypad;       // The keypad driver needed for button nav
 void
            init_keys(void);
 const char NO_KEY = '\0';

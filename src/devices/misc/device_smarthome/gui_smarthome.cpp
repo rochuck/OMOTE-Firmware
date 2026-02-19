@@ -18,6 +18,12 @@ LV_IMG_DECLARE(lightbulb);
 
 uint16_t GUI_SMARTHOME_ACTIVATE;
 
+uint16_t LVGL_UP;
+uint16_t LVGL_DOWN;
+uint16_t LVGL_ENTER;
+uint16_t LVGL_VOLUP;
+uint16_t LVGL_VOLDOWN;
+
 std::map<char, repeatModes> key_repeatModes_smarthome    = {};
 std::map<char, uint16_t>    key_commands_short_smarthome = {};
 std::map<char, uint16_t>    key_commands_long_smarthome  = {};
@@ -59,6 +65,7 @@ init_entity_maps(void) {
                "light.signify_netherlands_b_v_lct014_light_2",
                "Computer Floor\nLamp");                                                   // living room floor lamp-computer
     ADD_ENTITY("lrfl_piano", "light.signify_netherlands_b_v_lct014_light", "Piano Lamp"); // living room floor lamp - piano
+    ADD_ENTITY("frfl_educated", "light.educated_lamp_group", "Educated Lamp");            // family room floor lamp - educated
 }
 
 // Smart Home Toggle Event handler
@@ -136,13 +143,24 @@ smartHomeSlider_event_cb(lv_event_t* e) {
     const char*  friendly_name = (const char*) (e->user_data);
     entity_item* e_item        = friendly_map[friendly_name];
     lv_obj_t*    slider        = lv_event_get_target(e);
+    uint32_t     val           = lv_slider_get_value(slider);
+    uint32_t     old_val       = (uint32_t) (uintptr_t) lv_obj_get_user_data(slider);
+
+    if (val > old_val) { val += 15; }
+    if (val < old_val) { val -= 15; }
+    if (val > 255) { val = 255; }
+    if (val < 0) { val = 0; }
+
+    lv_slider_set_value(slider, val, LV_ANIM_OFF);
+    lv_obj_set_user_data(slider, (void*) (uintptr_t) val);
+
     if (e_item == NULL) { return; }
     payload = "\"service\":\"turn_on\"";
     payload += ",\"target\":{\"entity_id\":\"";
     payload += e_item->entity_id;
     payload += "\"}";
     payload += ",\"service_data\":{\"brightness\":";
-    payload += std::to_string(lv_slider_get_value(slider));
+    payload += std::to_string(val);
     payload += "}";
     std::string payload_str(payload);
 
@@ -150,18 +168,10 @@ smartHomeSlider_event_cb(lv_event_t* e) {
 }
 
 void
-create_tab_content_smarthome(lv_obj_t* tab) {
+create_switch(lv_obj_t* tab, lv_obj_t* menuBox, lv_group_t* g, const char* switch_name) {
 
-    // Add content to the smart home tab
-    lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_scrollbar_mode(tab, LV_SCROLLBAR_MODE_ACTIVE);
+    menuBox = lv_obj_create(tab);
 
-    // Add a label, then a box for the light controls
-    lv_obj_t* menuLabel = lv_label_create(tab);
-    lv_label_set_text(menuLabel, "Living Room");
-
-    lv_obj_t* menuBox = lv_obj_create(tab);
     lv_obj_set_size(menuBox, lv_pct(100), 79);
     lv_obj_set_style_bg_color(menuBox, color_primary, LV_PART_MAIN);
     lv_obj_set_style_border_width(menuBox, 0, LV_PART_MAIN);
@@ -173,10 +183,10 @@ create_tab_content_smarthome(lv_obj_t* tab) {
     lv_obj_align(bulbIcon, LV_ALIGN_TOP_LEFT, 0, 0);
 
     // get the entity for the computer floor lamp, using the friendly name
-    entity_item* e = friendly_map["lrfl_comp"];
+    entity_item* e = friendly_map[switch_name];
 
-    menuLabel = lv_label_create(menuBox);
-    lv_label_set_text(menuLabel, e->label); //"Computer Floor\nLamp");
+    lv_obj_t* menuLabel = lv_label_create(menuBox);
+    lv_label_set_text(menuLabel, e->label); // entity label
     lv_obj_align(menuLabel, LV_ALIGN_TOP_LEFT, 22, 3);
     e->lv_switch = lv_switch_create(menuBox);
 
@@ -186,6 +196,7 @@ create_tab_content_smarthome(lv_obj_t* tab) {
     lv_obj_set_style_bg_color(e->lv_switch, color_primary, LV_PART_INDICATOR);
     if (e->state) { lv_obj_add_state(e->lv_switch, LV_STATE_CHECKED); }
     lv_obj_add_event_cb(e->lv_switch, smartHomeToggle_event_cb, LV_EVENT_VALUE_CHANGED, (void*) e->friendly_name);
+    lv_group_add_obj(g, e->lv_switch);
 
     e->lv_slider = lv_slider_create(menuBox);
     lv_slider_set_range(e->lv_slider, 0, 255);
@@ -200,56 +211,40 @@ create_tab_content_smarthome(lv_obj_t* tab) {
     lv_obj_align(e->lv_slider, LV_ALIGN_TOP_MID, 0, 37);
     lv_slider_set_value(e->lv_slider, e->brightness, LV_ANIM_OFF);
     lv_obj_add_event_cb(e->lv_slider, smartHomeSlider_event_cb, LV_EVENT_VALUE_CHANGED, (void*) e->friendly_name);
+    lv_group_add_obj(g, e->lv_slider);
+    // initialize user data to 0, we will use this to store the previous value
+    lv_obj_set_user_data(e->lv_slider, (void*) (uintptr_t) 0);
+}
 
-    // Add another menu box for a second appliance
-    menuBox = lv_obj_create(tab);
-    lv_obj_set_size(menuBox, lv_pct(100), 79);
-    lv_obj_set_style_bg_color(menuBox, color_primary, LV_PART_MAIN);
-    lv_obj_set_style_border_width(menuBox, 0, LV_PART_MAIN);
+void
+create_tab_content_smarthome(lv_obj_t* tab) {
+    lv_obj_t*   menuBox;
+    lv_group_t* g = lv_group_create();
+    lv_group_set_default(g);
+    lv_indev_set_group(indev_keypad, g); // MUST bind keypad to group
 
-    bulbIcon = lv_img_create(menuBox);
-    lv_img_set_src(bulbIcon, &lightbulb);
-    lv_obj_set_style_img_recolor(bulbIcon, lv_color_white(), LV_PART_MAIN);
-    lv_obj_set_style_img_recolor_opa(bulbIcon, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_align(bulbIcon, LV_ALIGN_TOP_LEFT, 0, 0);
+    // TBD indev_keypad might be null when running on windows. fix later
 
-    // get the entity for the piano lamp, using the friendly name
-    e = friendly_map["lrfl_piano"];
+    // Add content to the smart home tab
+    lv_obj_set_layout(tab, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(tab, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_scrollbar_mode(tab, LV_SCROLLBAR_MODE_ACTIVE);
+    lv_obj_add_flag(tab, LV_OBJ_FLAG_SCROLL_ON_FOCUS); // Auto-scroll magic
 
-    menuLabel = lv_label_create(menuBox);
-    lv_label_set_text(menuLabel, e->label); //"Piano Lamp"
-    lv_obj_align(menuLabel, LV_ALIGN_TOP_LEFT, 22, 3);
-    e->lv_switch = lv_switch_create(menuBox);
+    // Add a label, then a box for the light controls
+    lv_obj_t* menuLabel = lv_label_create(tab);
+    lv_label_set_text(menuLabel, "Living Room");
 
-    lv_obj_set_size(e->lv_switch, 40, 22);
-    lv_obj_align(e->lv_switch, LV_ALIGN_TOP_RIGHT, 0, 0);
-    lv_obj_set_style_bg_color(e->lv_switch, lv_color_lighten(color_primary, 50), LV_PART_MAIN);
-    lv_obj_set_style_bg_color(e->lv_switch, color_primary, LV_PART_INDICATOR);
-    if (e->state) { lv_obj_add_state(e->lv_switch, LV_STATE_CHECKED); }
-    lv_obj_add_event_cb(e->lv_switch, smartHomeToggle_event_cb, LV_EVENT_VALUE_CHANGED, (void*) e->friendly_name);
-
-    e->lv_slider = lv_slider_create(menuBox);
-    lv_slider_set_range(e->lv_slider, 0, 255);
-    lv_obj_set_style_bg_color(e->lv_slider, lv_color_lighten(lv_color_black(), 30), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_grad_color(e->lv_slider, lv_color_lighten(lv_palette_main(LV_PALETTE_AMBER), 180), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_grad_dir(e->lv_slider, LV_GRAD_DIR_HOR, LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(e->lv_slider, lv_color_white(), LV_PART_KNOB);
-    lv_obj_set_style_bg_opa(e->lv_slider, 255, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(e->lv_slider, lv_color_lighten(color_primary, 50), LV_PART_MAIN);
-    lv_slider_set_value(e->lv_slider, e->brightness, LV_ANIM_OFF);
-    lv_obj_set_size(e->lv_slider, lv_pct(90), 10);
-    lv_obj_align(e->lv_slider, LV_ALIGN_TOP_MID, 0, 37);
-    lv_slider_set_value(e->lv_slider, e->brightness, LV_ANIM_OFF);
-    lv_obj_add_event_cb(e->lv_slider, smartHomeSlider_event_cb, LV_EVENT_VALUE_CHANGED, (void*) e->friendly_name);
+    // add switches
+    create_switch(tab, menuBox, g, "lrfl_comp");
+    create_switch(tab, menuBox, g, "lrfl_piano");
 
     // Add another room (empty for now)
     menuLabel = lv_label_create(tab);
-    lv_label_set_text(menuLabel, "Kitchen");
+    lv_label_set_text(menuLabel, "Family Room");
 
-    menuBox = lv_obj_create(tab);
-    lv_obj_set_size(menuBox, lv_pct(100), 79);
-    lv_obj_set_style_bg_color(menuBox, color_primary, LV_PART_MAIN);
-    lv_obj_set_style_border_width(menuBox, 0, LV_PART_MAIN);
+    // add switches
+    create_switch(tab, menuBox, g, "frfl_educated");
 }
 
 void
@@ -262,6 +257,11 @@ void
 gui_setKeys_smarthome() {
     key_commands_short_smarthome = {
         {KEY_STOP, SCENE_SELECTION},
+        {KEY_UP, LVGL_UP},
+        {KEY_OK, LVGL_ENTER},
+        {KEY_DOWN, LVGL_DOWN},
+        {KEY_VOLUP, LVGL_VOLUP},
+        {KEY_VOLDO, LVGL_VOLDOWN},
     };
 }
 
@@ -278,6 +278,11 @@ register_gui_smarthome(void) {
 
     register_command(&GUI_SMARTHOME_ACTIVATE,
                      makeCommandData(GUI, {std::to_string(MAIN_GUI_LIST), std::string(tabName_smarthome)}));
+    register_command(&LVGL_UP, makeCommandData(LVGL, {std::to_string(LV_KEY_PREV)}));
+    register_command(&LVGL_DOWN, makeCommandData(LVGL, {std::to_string(LV_KEY_NEXT)}));
+    register_command(&LVGL_ENTER, makeCommandData(LVGL, {std::to_string(LV_KEY_ENTER)}));
+    register_command(&LVGL_VOLUP, makeCommandData(LVGL, {std::to_string(LV_KEY_RIGHT)}));
+    register_command(&LVGL_VOLDOWN, makeCommandData(LVGL, {std::to_string(LV_KEY_LEFT)}));
 
     // Setup our entities, and data that should persist if we navigate away from the screen
     init_entity_maps();

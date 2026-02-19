@@ -96,6 +96,7 @@ enum commandHandlers {
     SPECIAL,
     SCENE,
     GUI,
+    LVGL,
     IR,
 #if (ENABLE_WIFI_AND_MQTT == 1)
     MQTT,
