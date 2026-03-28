@@ -66,6 +66,11 @@ init_entity_maps(void) {
                "Computer Floor\nLamp");                                                   // living room floor lamp-computer
     ADD_ENTITY("lrfl_piano", "light.signify_netherlands_b_v_lct014_light", "Piano Lamp"); // living room floor lamp - piano
     ADD_ENTITY("frfl_educated", "light.educated_lamp_group", "Educated Lamp");            // family room floor lamp - educated
+    ADD_ENTITY("frtl_sofa", "light.sofa_lamp_tradfri_1100", "Sofa Lamp");                 // family room table lamp - sofa
+    ADD_ENTITY("frtl_liquor",
+               "light.signify_netherlands_b_v_lct014_light_3",
+               "Liquor Lamp");                                  // family room table lamp - liquor cabinet
+    ADD_ENTITY("frcl_fan", "light.fan_lamp_light", "Fan Lamp"); // family room ceiling lamp - fan cabinet
 }
 
 // Smart Home Toggle Event handler
@@ -231,20 +236,22 @@ create_tab_content_smarthome(lv_obj_t* tab) {
     lv_obj_set_scrollbar_mode(tab, LV_SCROLLBAR_MODE_ACTIVE);
     lv_obj_add_flag(tab, LV_OBJ_FLAG_SCROLL_ON_FOCUS); // Auto-scroll magic
 
-    // Add a label, then a box for the light controls
+    // Add another room (empty for now)
     lv_obj_t* menuLabel = lv_label_create(tab);
+    lv_label_set_text(menuLabel, "Family Room");
+
+    // add switches
+    create_switch(tab, menuBox, g, "frtl_sofa");
+    create_switch(tab, menuBox, g, "frfl_educated");
+    create_switch(tab, menuBox, g, "frtl_liquor");
+
+    // Add a label, then a box for the light controls
+    menuLabel = lv_label_create(tab);
     lv_label_set_text(menuLabel, "Living Room");
 
     // add switches
     create_switch(tab, menuBox, g, "lrfl_comp");
     create_switch(tab, menuBox, g, "lrfl_piano");
-
-    // Add another room (empty for now)
-    menuLabel = lv_label_create(tab);
-    lv_label_set_text(menuLabel, "Family Room");
-
-    // add switches
-    create_switch(tab, menuBox, g, "frfl_educated");
 }
 
 void
@@ -262,6 +269,8 @@ gui_setKeys_smarthome() {
         {KEY_DOWN, LVGL_DOWN},
         {KEY_VOLUP, LVGL_VOLUP},
         {KEY_VOLDO, LVGL_VOLDOWN},
+        {KEY_CHUP, LVGL_VOLUP},
+        {KEY_CHDOW, LVGL_VOLDOWN},
     };
 }
 

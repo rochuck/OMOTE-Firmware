@@ -60,6 +60,9 @@
 #include "guis/gui_sceneSelection.h"
 #include "guis/gui_settings.h"
 #include "guis/gui_t9.h"
+#if (ENABLE_OTA == 1)
+#include "guis/gui_ota.h"
+#endif
 // #include "devices/misc/device_airconditioner/gui_airconditioner.h"
 #include "applicationInternal/gui/guiStatusUpdate.h"
 #include "applicationInternal/keys.h"
@@ -217,6 +220,12 @@ main(int argc, char* argv[]) {
     init_mqtt();
 #endif
 
+#if (ENABLE_OTA == 1)
+    set_ota_start_cb(ota_gui_start);
+    set_ota_progress_cb(ota_gui_set_progress);
+    init_ota();
+#endif
+
     omote_log_i("Setup finished in %lu ms.\r\n", millis());
 
 #if defined(WIN32) || defined(__linux__) || defined(__APPLE__)
@@ -273,7 +282,9 @@ loop(unsigned long* pIMUTaskTimer, unsigned long* pUpdateStatusTimer) {
 // call mqtt loop to receive mqtt messages, if you are subscribed to some topics
 #if (ENABLE_WIFI_AND_MQTT == 1)
     mqtt_loop();
-
+#endif
+#if (ENABLE_OTA == 1)
+    ota_loop();
 #endif
 
     // --- every 100 ms -------------------------------------------------------------------

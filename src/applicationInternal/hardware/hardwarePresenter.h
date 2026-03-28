@@ -220,6 +220,20 @@ bool
 websocket_sub(const char* entity_list);
 #endif
 
+// --- OTA --------------------------------------------------------------------
+#if (ENABLE_OTA == 1)
+typedef void (*tOtaStartCallback)(void);
+typedef void (*tOtaProgressCallback)(int pct);
+void
+set_ota_start_cb(tOtaStartCallback cb);
+void
+set_ota_progress_cb(tOtaProgressCallback cb);
+void
+init_ota(void);
+void
+ota_loop(void);
+#endif
+
 // --- memory usage -----------------------------------------------------------
 void
 get_heapUsage(unsigned long* heapSize, unsigned long* freeHeap, unsigned long* maxAllocHeap, unsigned long* minFreeHeap);
