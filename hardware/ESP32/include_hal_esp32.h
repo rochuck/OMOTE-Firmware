@@ -16,3 +16,6 @@
 #include "ESP32/user_led_hal_esp32.h"
 #include "ESP32/websocket_hal_esp32.h"
 #include "ESP32/ota_hal_esp32.h"
+#if (ENABLE_COMPANION == 1)
+#include "ESP32/companion_hal_esp32.h"
+#endif

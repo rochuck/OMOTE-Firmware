@@ -33,6 +33,64 @@ If `OMOTE.local` doesn't resolve, replace `upload_port` in `platformio.ini` (or 
 
 No other source files need touching; all OTA code is `#if (ENABLE_OTA == 1)` gated in `hardware/ESP32/ota_hal_esp32.cpp`.
 
+## Apple TV Companion Protocol (App Launcher)
+
+The `esp32-s3-Rev5andHigher` environment includes a C++ port of the Apple TV [Companion protocol](https://github.com/postlund/pyatv/tree/master/pyatv/protocols/companion), the same protocol used by the iOS TV Remote app. It lets the remote launch specific apps by bundle ID with a single button press.
+
+### One-time pairing
+
+Pairing uses SRP (done once on your Mac via pyatv — no PIN entry needed on the remote after this):
+
+```bash
+pip install pyatv
+atvremote scan                               # find your Apple TV's device ID
+atvremote --id <ATV_ID> --protocol companion pair
+```
+
+At the end of pairing, pyatv prints a line like:
+```
+You may now use these credentials: <ltpk>:<ltsk>:<atv_id>:<client_id>
+```
+
+Copy that credentials string into `src/secrets_override.h`:
+
+```cpp
+#define COMPANION_ATV_HOST  "192.168.x.x"   // your Apple TV's IP
+#define COMPANION_ATV_PORT  49152
+#define COMPANION_CREDENTIALS "ltpk:ltsk:atv_id:client_id"
+```
+
+The IP and port can also be found by running `atvremote scan`.
+
+### Using app launch commands
+
+In any scene's key bindings or start sequence, use the pre-registered commands:
+
+```cpp
+executeCommand(COMPANION_LAUNCH_NETFLIX);
+executeCommand(COMPANION_LAUNCH_YOUTUBE);
+executeCommand(COMPANION_LAUNCH_DISNEYPLUS);
+executeCommand(COMPANION_LAUNCH_APPLETV_PLUS);
+executeCommand(COMPANION_LAUNCH_PRIMEVIDEO);
+executeCommand(COMPANION_LAUNCH_HBO_MAX);
+executeCommand(COMPANION_LAUNCH_HULU);
+executeCommand(COMPANION_LAUNCH_SPOTIFY);
+executeCommand(COMPANION_LAUNCH_PLEX);
+// Launch any app by bundle ID:
+executeCommand(COMPANION_LAUNCH_CUSTOM, "com.example.myapp");
+```
+
+To find a bundle ID for any installed app:
+```bash
+atvremote --id <ATV_ID> --protocol companion app_list
+```
+
+The connection is maintained in a FreeRTOS background task (core 0). After the first button press the task connects, authenticates, and establishes a session (~500–800 ms), then launches the app. Subsequent presses on a live session are near-instant.
+
+### Disabling Companion
+
+The feature is `#if (ENABLE_COMPANION == 1)` gated. It is off by default (`ENABLE_COMPANION=0` in `[env]`) and enabled only in `[env:esp32-s3-Rev5andHigher]`. To disable it there, change `-D ENABLE_COMPANION=1` to `-D ENABLE_COMPANION=0` in [platformio.ini](platformio.ini) — no other source files need touching.
+
 ---
 
 GUIS - I've used Squareline Studio for some of this stuff, and cherry-picked the output code

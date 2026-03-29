@@ -107,6 +107,9 @@ enum commandHandlers {
 #if (ENABLE_KEYBOARD_BLE == 1)
     BLE_KEYBOARD,
 #endif
+#if (ENABLE_COMPANION == 1)
+    COMPANION,
+#endif
 };
 
 struct commandData {

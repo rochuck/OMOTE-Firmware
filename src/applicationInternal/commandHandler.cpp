@@ -282,6 +282,20 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
         }
         break;
     }
+
+#if (ENABLE_COMPANION == 1)
+    case COMPANION: {
+        auto        it     = commandData.commandPayloads.begin();
+        std::string action = *it++;
+        std::string param  = (it != commandData.commandPayloads.end()) ? *it : "";
+        if (!additionalPayload.empty()) param = additionalPayload;
+        omote_log_d("execute: companion action '%s' param '%s'\r\n", action.c_str(), param.c_str());
+        if (action == "launch" && !param.empty()) {
+            companion_launchApp_HAL(param);
+        }
+        break;
+    }
+#endif
     }
 }
 

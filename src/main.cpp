@@ -41,6 +41,9 @@
 // #include "devices/AVreceiver/device_lgsoundbar/device_lgsoundbar.h"
 //    media player
 #include "devices/mediaPlayer/device_appleTV/device_appleTV.h"
+#if (ENABLE_COMPANION == 1)
+#include "devices/mediaPlayer/device_appleTV_companion/device_appleTV_companion.h"
+#endif
 // #include "devices/mediaPlayer/device_lgbluray/device_lgbluray.h"
 // #include "devices/mediaPlayer/device_samsungbluray/device_samsungbluray.h"
 // #include "devices/mediaPlayer/device_shield/device_shield.h"
@@ -140,6 +143,9 @@ main(int argc, char* argv[]) {
     // register_device_lgsoundbar();
     //    media player
     register_device_appleTV();
+#if (ENABLE_COMPANION == 1)
+    register_device_appleTV_companion();
+#endif
     // register_device_lgbluray();
     // register_device_samsungbluray();
     // register_device_shield();
@@ -218,6 +224,11 @@ main(int argc, char* argv[]) {
 // this call will also init websockets to home assistant
 #if (ENABLE_WIFI_AND_MQTT == 1)
     init_mqtt();
+#endif
+
+#if (ENABLE_COMPANION == 1)
+    // Companion task connects lazily once WiFi is up; safe to init here.
+    init_companion_HAL();
 #endif
 
 #if (ENABLE_OTA == 1)

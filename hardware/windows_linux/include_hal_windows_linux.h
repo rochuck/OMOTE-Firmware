@@ -15,3 +15,6 @@
 #include "windows_linux/tft_hal_windows_linux.h"
 #include "windows_linux/user_led_hal_windows_linux.h"
 #include "windows_linux/websocket_hal_windows_linux.h"
+#if (ENABLE_COMPANION == 1)
+#include "windows_linux/companion_hal_windows_linux.h"
+#endif

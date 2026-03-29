@@ -237,3 +237,14 @@ ota_loop(void);
 // --- memory usage -----------------------------------------------------------
 void
 get_heapUsage(unsigned long* heapSize, unsigned long* freeHeap, unsigned long* maxAllocHeap, unsigned long* minFreeHeap);
+
+// --- Apple TV Companion protocol --------------------------------------------
+#if (ENABLE_COMPANION == 1)
+#include <string>
+void
+init_companion_HAL(void);
+bool
+companion_launchApp_HAL(const std::string& bundleID);
+bool
+companion_isConnected_HAL(void);
+#endif

@@ -17,6 +17,15 @@
 #define WS_URL "ws://HA_IP:8123/api/websocket" // override it in file "secrets_override.h"
 #define WS_TOKEN "your ha token"               // override it in file "secrets_override.h"
 
+// --- Apple TV Companion Protocol ----------------------------------------
+// To get credentials, on a Mac with pyatv installed:
+//   atvremote --id <ATV_ID> --protocol companion pair
+//   atvremote --id <ATV_ID> --protocol companion credentials
+// Credentials format: ltpk_hex:ltsk_hex:atv_id:client_id
+#define COMPANION_ATV_HOST "192.168.1.100"   // override in secrets_override.h
+#define COMPANION_ATV_PORT 49152              // override in secrets_override.h
+#define COMPANION_CREDENTIALS "placeholder:placeholder:placeholder:placeholder"  // override in secrets_override.h
+
 // --- include override settings from seperate file
 // ---------------------------------------------------------------------------------------------------------------
 #if __has_include("secrets_override.h")
