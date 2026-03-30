@@ -5,8 +5,8 @@
 #include <map>
 // devices
 #include "applicationInternal/commandHandler.h"
-#include "devices/AVreceiver/device_yamahaAmp/device_yamahaAmp.h"
-#include "devices/TV/device_samsungTV/device_samsungTV.h"
+#include "devices/AVreceiver/device_marantzAmp/device_marantzAmp.h"
+#include "devices/TV/device_sharpTV/device_sharpTV.h"
 // guis
 #include "devices/mediaPlayer/device_appleTV/gui_appleTV.h"
 #if (ENABLE_COMPANION == 1)
@@ -37,13 +37,13 @@ scene_setKeys_appleTV() {
 
 void
 scene_start_sequence_appleTV(void) {
-    executeCommand(SAMSUNG_POWER_ON);
+    executeCommand(SHARP_POWER_ON);
     delay(500);
-    executeCommand(YAMAHA_POWER_ON);
+    executeCommand(MARANTZ_POWER_ON);
     delay(1500);
-    executeCommand(YAMAHA_INPUT_DVD);
+    executeCommand(MARANTZ_INPUT_DVD);
     delay(3000);
-    executeCommand(SAMSUNG_INPUT_HDMI_3);
+    executeCommand(SHARP_INPUT_HDMI_5);
     delay(2000);
 #if (ENABLE_COMPANION == 1)
     executeCommand(COMPANION_LAUNCH_NETFLIX);

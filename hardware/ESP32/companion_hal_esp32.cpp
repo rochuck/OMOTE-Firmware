@@ -28,7 +28,9 @@
 #include <ChaChaPoly.h>
 #include <Curve25519.h>
 #include <Ed25519.h>
+#include <SHA256.h>
 #include <SHA512.h>
+
 
 #include "applicationInternal/omote_log.h"
 #include "secrets.h"
@@ -41,10 +43,10 @@ static const char* TAG = "COMPANION";
 
 #define FRAME_HEADER_LEN    4
 #define AUTH_TAG_LEN       16
-#define RECV_BUF_SIZE    2048
+#define RECV_BUF_SIZE    8192
 #define CMD_QUEUE_LEN       4
 #define CMD_BUNDLE_MAX    128
-#define TASK_STACK_SIZE  9216
+#define TASK_STACK_SIZE  40960
 
 // Frame type bytes
 #define FT_PV_START  5
@@ -118,17 +120,17 @@ static int hex_nibble(char c) {
 }
 
 static int hex_decode(const char* hex, uint8_t* out, size_t max_out) {
-    size_t len = strlen(hex);
-    if (len % 2 != 0) return -1;
-    size_t bytes = len / 2;
-    if (bytes > max_out) return -1;
-    for (size_t i = 0; i < bytes; i++) {
+    // Decode exactly max_out bytes (2*max_out hex chars) from hex.
+    // The string may be longer; only the first 2*max_out chars are consumed.
+    size_t needed = max_out * 2;
+    if (strlen(hex) < needed) return -1;
+    for (size_t i = 0; i < max_out; i++) {
         int hi = hex_nibble(hex[i * 2]);
         int lo = hex_nibble(hex[i * 2 + 1]);
         if (hi < 0 || lo < 0) return -1;
         out[i] = (uint8_t)((hi << 4) | lo);
     }
-    return (int)bytes;
+    return (int)max_out;
 }
 
 // ---------------------------------------------------------------------------
@@ -158,29 +160,48 @@ static bool parse_credentials(const char* cred_str, CompanionCredentials* out) {
     const char* last_colon = strrchr(p, ':');
     if (!last_colon) { omote_log_e("%s: no separator between atv_id and client_id\r\n", TAG); return false; }
 
-    size_t atv_len    = (size_t)(last_colon - p);
-    size_t client_len = strlen(last_colon + 1);
+    size_t atv_hex_len    = (size_t)(last_colon - p);
+    size_t client_hex_len = strlen(last_colon + 1);
 
-    if (atv_len == 0 || atv_len >= sizeof(out->atv_id)) {
-        omote_log_e("%s: atv_id length invalid (%u)\r\n", TAG, (unsigned)atv_len);
+    // atv_id and client_id are hex-encoded in the credential string; decode them.
+    if (atv_hex_len == 0 || atv_hex_len % 2 != 0) {
+        omote_log_e("%s: atv_id hex length invalid (%u)\r\n", TAG, (unsigned)atv_hex_len);
         return false;
     }
-    if (client_len == 0 || client_len >= sizeof(out->client_id)) {
-        omote_log_e("%s: client_id length invalid (%u)\r\n", TAG, (unsigned)client_len);
+    size_t atv_bytes = atv_hex_len / 2;
+    if (atv_bytes > sizeof(out->atv_id)) {
+        omote_log_e("%s: atv_id too long after decode (%u B)\r\n", TAG, (unsigned)atv_bytes);
         return false;
     }
+    if (hex_decode(p, out->atv_id, atv_bytes) != (int)atv_bytes) {
+        omote_log_e("%s: atv_id hex decode failed\r\n", TAG); return false;
+    }
+    out->atv_id_len = atv_bytes;
 
-    memcpy(out->atv_id, p, atv_len);
-    out->atv_id_len = atv_len;
-
-    memcpy(out->client_id, last_colon + 1, client_len);
-    out->client_id_len = client_len;
+    if (client_hex_len == 0 || client_hex_len % 2 != 0) {
+        omote_log_e("%s: client_id hex length invalid (%u)\r\n", TAG, (unsigned)client_hex_len);
+        return false;
+    }
+    size_t client_bytes = client_hex_len / 2;
+    if (client_bytes > sizeof(out->client_id)) {
+        omote_log_e("%s: client_id too long after decode (%u B)\r\n", TAG, (unsigned)client_bytes);
+        return false;
+    }
+    if (hex_decode(last_colon + 1, out->client_id, client_bytes) != (int)client_bytes) {
+        omote_log_e("%s: client_id hex decode failed\r\n", TAG); return false;
+    }
+    out->client_id_len = client_bytes;
 
     out->valid = true;
-    omote_log_d("%s: credentials parsed OK, atv_id='%.*s' client_id='%.*s'\r\n",
-                TAG,
-                (int)atv_len, out->atv_id,
-                (int)client_len, out->client_id);
+    omote_log_i("%s: credentials parsed OK\r\n", TAG);
+    omote_log_i("%s:   ltpk  (first 4B): %02X%02X%02X%02X\r\n", TAG,
+                out->ltpk[0], out->ltpk[1], out->ltpk[2], out->ltpk[3]);
+    omote_log_i("%s:   ltsk  (first 4B): %02X%02X%02X%02X\r\n", TAG,
+                out->ltsk[0], out->ltsk[1], out->ltsk[2], out->ltsk[3]);
+    omote_log_i("%s:   atv_id    (%u B): '%.*s'\r\n", TAG,
+                (unsigned)atv_bytes, (int)atv_bytes, out->atv_id);
+    omote_log_i("%s:   client_id (%u B): '%.*s'\r\n", TAG,
+                (unsigned)client_bytes, (int)client_bytes, out->client_id);
     return true;
 }
 
@@ -288,6 +309,131 @@ static void hkdf_sha512_32(const char*   salt_str,
         hkdf_extract(nullptr, 0, ikm, ikm_len, prk);
     }
     hkdf_expand(prk, info_str, out, 32);
+}
+
+// ---------------------------------------------------------------------------
+// Section 3b: HMAC-SHA256 and HKDF-SHA256 (RFC 5869)
+// ---------------------------------------------------------------------------
+
+#define SHA256_BLOCK_LEN  64
+#define SHA256_HASH_LEN   32
+
+static void hmac_sha256(const uint8_t* key, size_t key_len,
+                        const uint8_t* msg, size_t msg_len,
+                        uint8_t out[SHA256_HASH_LEN]) {
+    uint8_t k_ipad[SHA256_BLOCK_LEN];
+    uint8_t k_opad[SHA256_BLOCK_LEN];
+    uint8_t tk[SHA256_HASH_LEN];
+
+    if (key_len > SHA256_BLOCK_LEN) {
+        SHA256 h; h.update(key, key_len); h.finalize(tk, SHA256_HASH_LEN);
+        key = tk; key_len = SHA256_HASH_LEN;
+    }
+    memset(k_ipad, 0x36, SHA256_BLOCK_LEN);
+    memset(k_opad, 0x5c, SHA256_BLOCK_LEN);
+    for (size_t i = 0; i < key_len; i++) { k_ipad[i] ^= key[i]; k_opad[i] ^= key[i]; }
+
+    uint8_t inner[SHA256_HASH_LEN];
+    { SHA256 h; h.update(k_ipad, SHA256_BLOCK_LEN); h.update(msg, msg_len); h.finalize(inner, SHA256_HASH_LEN); }
+    { SHA256 h; h.update(k_opad, SHA256_BLOCK_LEN); h.update(inner, SHA256_HASH_LEN); h.finalize(out, SHA256_HASH_LEN); }
+}
+
+static void hkdf_sha256_32(const char*    salt_str,
+                           const char*    info_str,
+                           const uint8_t* ikm,
+                           size_t         ikm_len,
+                           uint8_t        out[32]) {
+    // Extract
+    uint8_t prk[SHA256_HASH_LEN];
+    if (salt_str && strlen(salt_str) > 0) {
+        hmac_sha256((const uint8_t*)salt_str, strlen(salt_str), ikm, ikm_len, prk);
+    } else {
+        static const uint8_t zero_salt[SHA256_HASH_LEN] = {0};
+        hmac_sha256(zero_salt, SHA256_HASH_LEN, ikm, ikm_len, prk);
+    }
+    // Expand: T(1) = HMAC-SHA256(PRK, info || 0x01), take first 32 bytes
+    size_t   info_len = info_str ? strlen(info_str) : 0;
+    uint8_t  buf[SHA256_HASH_LEN + 256 + 1];
+    size_t   pos = 0;
+    if (info_len) { memcpy(buf, info_str, info_len); pos += info_len; }
+    buf[pos++] = 0x01;
+    hmac_sha256(prk, SHA256_HASH_LEN, buf, pos, out);
+}
+
+// ---------------------------------------------------------------------------
+// Section 3c: Self-test with known RFC vectors
+// ---------------------------------------------------------------------------
+
+// RFC 5869 HKDF-SHA512 Test Case 1 (adapted — using SHA512 with test inputs)
+// We use a simple known-answer test: IKM=0x0b*22, salt=0x000102..0x0c (13B),
+// info=0xf0f1..0xf9 (10B), L=42. Expected OKM first 4 bytes from RFC.
+//
+// RFC 7539 §2.8.2 ChaCha20-Poly1305 AEAD test vector (known-answer).
+
+static void run_crypto_selftest(void) {
+    // --- HKDF-SHA512 test ---
+    // Using RFC 5869 Appendix A Test Case 3 values adapted for SHA-512.
+    // These are the same input bytes as Test Case 1 but with SHA-512.
+    // We verify HMAC-SHA512 directly with a known vector instead.
+    //
+    // HMAC-SHA512 known vector (from RFC 4231 Test Case 1):
+    //   Key  = 0x0b * 20
+    //   Data = "Hi There"
+    //   Expected HMAC = 87aa7cdea5ef619d4ff0b4241a1d6cb0...
+    {
+        uint8_t key[20];
+        memset(key, 0x0b, 20);
+        const char* data = "Hi There";
+        uint8_t result[64];
+        hmac_sha512(key, 20, (const uint8_t*)data, 8, result);
+        bool ok = (result[0] == 0x87 && result[1] == 0xaa && result[2] == 0x7c && result[3] == 0xde);
+        omote_log_i("%s: HMAC-SHA512 selftest: %s (got %02X%02X%02X%02X, want 87AA7CDE)\r\n",
+                    TAG, ok ? "PASS" : "FAIL",
+                    result[0], result[1], result[2], result[3]);
+    }
+
+    // --- ChaCha20-Poly1305 test (RFC 7539 §2.8.2) ---
+    // Key: all zeros (32B), nonce: 0x000000000000004a00000000 (12B)
+    // Counter starts at 1 per IETF spec.
+    // Plaintext: "Ladies and Gentlemen of the class of '99: If I could offer you only one tip
+    //             for the future, sunscreen would be it."
+    // We just test with a simpler known-answer: encrypt one block and check.
+    //
+    // Simpler test: RFC 7539 §2.1.1 ChaCha20 block output, first 4 bytes.
+    // Key=0, nonce=0x000000090000004a00000000, counter=1
+    // Expected first 4 output bytes: 10 f1 e7 e4
+    {
+        // We can't easily test ChaCha in isolation via ChaChaPoly, so
+        // test encrypt+decrypt round-trip to verify correctness.
+        uint8_t key[32]  = {0};
+        uint8_t nonce[12] = {0,0,0,0, 0,0,0,0x4a, 0,0,0,0};
+        uint8_t plain[4]  = {0x4c, 0x61, 0x64, 0x69}; // "Ladi"
+        uint8_t cipher[4+16];
+        uint8_t decout[4];
+
+        // Encrypt
+        ChaChaPoly enc;
+        enc.setKey(key, 32);
+        enc.setIV(nonce, 12);
+        enc.encrypt(cipher, plain, 4);
+        enc.computeTag(cipher+4, 16);
+
+        // Decrypt and verify
+        ChaChaPoly dec;
+        dec.setKey(key, 32);
+        dec.setIV(nonce, 12);
+        dec.decrypt(decout, cipher, 4);
+        bool tag_ok = dec.checkTag(cipher+4, 16);
+        bool data_ok = (memcmp(decout, plain, 4) == 0);
+        omote_log_i("%s: ChaChaPoly round-trip: %s (tag=%s data=%s)\r\n",
+                    TAG, (tag_ok && data_ok) ? "PASS" : "FAIL",
+                    tag_ok ? "ok" : "BAD", data_ok ? "ok" : "BAD");
+
+        // Also verify the ciphertext first byte against RFC 7539 §2.4.2:
+        // with key=0, nonce as above, counter=1, plaintext "Ladies..." → first byte 0xd3
+        // Our test uses different nonce so we can't check exact value,
+        // but round-trip pass proves encrypt/decrypt are inverses.
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -624,6 +770,50 @@ static bool opack_skip_value(const uint8_t* buf, size_t len, size_t& p) {
     return false;
 }
 
+// Find a sub-dict value by key in a top-level OPACK dict.
+// Sets *out_offset and *out_len to the slice of buf containing the sub-dict bytes.
+static bool opack_find_subdict(const uint8_t* buf, size_t len,
+                                const char* key,
+                                uint32_t* out_offset, uint32_t* out_len) {
+    if (len < 1) return false;
+    uint8_t first = buf[0];
+    if ((first & 0xF0) != 0xE0) return false;
+
+    size_t pair_count = first & 0x0F;
+    bool   endless    = (pair_count == 0xF);
+    size_t pos        = 1;
+    size_t key_len    = strlen(key);
+
+    for (size_t pair = 0; ; pair++) {
+        if (!endless && pair >= pair_count) break;
+        if (pos >= len) break;
+        if (endless && buf[pos] == 0x03) break;
+
+        uint8_t kb = buf[pos];
+        size_t klen = 0;
+        const char* kdata = nullptr;
+        if (kb >= 0x40 && kb <= 0x60) {
+            klen  = kb - 0x40;
+            kdata = (const char*)(buf + pos + 1);
+            pos  += 1 + klen;
+        } else {
+            if (!opack_skip_value(buf, len, pos)) break;
+            if (!opack_skip_value(buf, len, pos)) break;
+            continue;
+        }
+
+        bool match = (klen == key_len && memcmp(kdata, key, key_len) == 0);
+        size_t val_start = pos;
+        if (!opack_skip_value(buf, len, pos)) break;
+        if (match) {
+            *out_offset = (uint32_t)val_start;
+            *out_len    = (uint32_t)(pos - val_start);
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool opack_find_uint32(const uint8_t* buf, size_t len,
                                const char* key, uint32_t* value) {
     if (len < 1) return false;
@@ -714,7 +904,11 @@ static bool recv_exact(WiFiClient& c, uint8_t* buf, size_t n) {
     size_t got = 0;
     unsigned long deadline = millis() + 5000;
     while (got < n) {
-        if (!c.connected()) return false;
+        if (!c.connected()) {
+            omote_log_e("%s: recv_exact: connection dropped after %u/%u bytes\r\n",
+                        TAG, (unsigned)got, (unsigned)n);
+            return false;
+        }
         int avail = c.available();
         if (avail > 0) {
             size_t want = n - got;
@@ -722,7 +916,11 @@ static bool recv_exact(WiFiClient& c, uint8_t* buf, size_t n) {
             size_t r = c.read(buf + got, want);
             if (r > 0) got += r;
         } else {
-            if (millis() > deadline) return false;
+            if (millis() > deadline) {
+                omote_log_e("%s: recv_exact: timeout after %u/%u bytes\r\n",
+                            TAG, (unsigned)got, (unsigned)n);
+                return false;
+            }
             vTaskDelay(pdMS_TO_TICKS(5));
         }
     }
@@ -811,10 +1009,9 @@ static bool chacha_decrypt(const uint8_t key[32], const uint8_t nonce[12],
 
 static bool send_encrypted(WiFiClient& c, uint8_t frame_type,
                              const uint8_t* payload, size_t payload_len) {
-    g_session.send_counter++;
-
     uint8_t nonce[12];
     make_counter_nonce(g_session.send_counter, nonce);
+    g_session.send_counter++;
 
     // Build frame header for AAD (type + length of encrypted payload)
     size_t enc_len = payload_len + AUTH_TAG_LEN;
@@ -858,9 +1055,9 @@ static bool recv_decrypted(WiFiClient& c,
     uint8_t enc_buf[RECV_BUF_SIZE + AUTH_TAG_LEN];
     if (!recv_exact(c, enc_buf, enc_len)) return false;
 
-    g_session.recv_counter++;
     uint8_t nonce[12];
     make_counter_nonce(g_session.recv_counter, nonce);
+    g_session.recv_counter++;
 
     *out_len = buf_size;
     if (!chacha_decrypt(g_session.input_key, nonce,
@@ -877,12 +1074,12 @@ static bool recv_decrypted(WiFiClient& c,
 // ---------------------------------------------------------------------------
 
 static bool run_pair_verify(WiFiClient& c, const CompanionCredentials& creds) {
-    omote_log_d("%s: starting PairVerify\r\n", TAG);
+    omote_log_i("%s: starting PairVerify\r\n", TAG);
 
     // Generate ephemeral X25519 keypair.
-    // dh1(k, f): k = private key output, f = public key output.
+    // dh1(k, f): k = public key output (send to peer), f = private key output (keep secret).
     uint8_t local_priv[32], local_pub[32];
-    Curve25519::dh1(local_priv, local_pub);
+    Curve25519::dh1(local_pub, local_priv);
 
     // --- Step 1: Send PV_Start ---
     uint8_t tlv8_buf[64];
@@ -897,9 +1094,30 @@ static bool run_pair_verify(WiFiClient& c, const CompanionCredentials& creds) {
     uint8_t opack_buf[256];
     size_t  opack_len = opack_pv_start(opack_buf, sizeof(opack_buf), tlv8_buf, tlv8_len);
     if (!opack_len) { omote_log_e("%s: PV_Start build failed\r\n", TAG); return false; }
+    omote_log_i("%s: sending PV_Start (opack %u B, tlv8 %u B)\r\n", TAG, (unsigned)opack_len, (unsigned)tlv8_len);
+    // Dump the full frame bytes (header + payload) for protocol verification
+    {
+        uint8_t frame_hdr[4] = {
+            FT_PV_START,
+            (uint8_t)((opack_len >> 16) & 0xFF),
+            (uint8_t)((opack_len >>  8) & 0xFF),
+            (uint8_t)(opack_len & 0xFF)
+        };
+        omote_log_i("%s: PV_Start frame hdr: %02X %02X %02X %02X\r\n", TAG,
+                    frame_hdr[0], frame_hdr[1], frame_hdr[2], frame_hdr[3]);
+        // First 16 bytes of opack payload
+        omote_log_i("%s: PV_Start opack[0..15]: "
+                    "%02X %02X %02X %02X %02X %02X %02X %02X "
+                    "%02X %02X %02X %02X %02X %02X %02X %02X\r\n", TAG,
+                    opack_buf[0],  opack_buf[1],  opack_buf[2],  opack_buf[3],
+                    opack_buf[4],  opack_buf[5],  opack_buf[6],  opack_buf[7],
+                    opack_buf[8],  opack_buf[9],  opack_buf[10], opack_buf[11],
+                    opack_buf[12], opack_buf[13], opack_buf[14], opack_buf[15]);
+    }
     if (!send_frame(c, FT_PV_START, opack_buf, opack_len)) {
         omote_log_e("%s: PV_Start send failed\r\n", TAG); return false;
     }
+    omote_log_i("%s: PV_Start sent, waiting for PV_Next from ATV\r\n", TAG);
 
     // --- Step 2: Receive PV_Next response ---
     uint8_t recv_type;
@@ -961,6 +1179,12 @@ static bool run_pair_verify(WiFiClient& c, const CompanionCredentials& creds) {
         }
     }
     if (pd_len == 0) { omote_log_e("%s: _pd not found in PV_Next\r\n", TAG); return false; }
+    omote_log_i("%s: PV_Next pd_len=%u, TLV8[0..7]: %02X %02X %02X %02X %02X %02X %02X %02X\r\n",
+                TAG, (unsigned)pd_len,
+                pd_len>0?pd_buf[0]:0, pd_len>1?pd_buf[1]:0,
+                pd_len>2?pd_buf[2]:0, pd_len>3?pd_buf[3]:0,
+                pd_len>4?pd_buf[4]:0, pd_len>5?pd_buf[5]:0,
+                pd_len>6?pd_buf[6]:0, pd_len>7?pd_buf[7]:0);
 
     // Extract server public key and encrypted data from TLV8
     uint8_t server_pub[32];
@@ -970,28 +1194,36 @@ static bool run_pair_verify(WiFiClient& c, const CompanionCredentials& creds) {
 
     if (server_pub_len != 32) { omote_log_e("%s: bad server pub key length %u\r\n", TAG, (unsigned)server_pub_len); return false; }
     if (enc_data_len == 0)    { omote_log_e("%s: no encrypted data in TLV8\r\n", TAG); return false; }
+    omote_log_i("%s: server_pub[0..3]: %02X%02X%02X%02X  enc_data_len=%u\r\n", TAG,
+                server_pub[0], server_pub[1], server_pub[2], server_pub[3],
+                (unsigned)enc_data_len);
 
     // --- Step 3: X25519 shared secret ---
-    // dh2(k, f): k starts as our private key and is overwritten with the shared secret.
-    Curve25519::dh2(local_priv, server_pub);
-    // local_priv now holds the shared secret.
+    // dh2(k, f): k = other party's public key (input) → shared secret (output); f = our private key.
+    uint8_t shared_secret[32];
+    memcpy(shared_secret, server_pub, 32);
+    Curve25519::dh2(shared_secret, local_priv);
+    omote_log_i("%s: shared_secret[0..3]: %02X%02X%02X%02X\r\n", TAG,
+                shared_secret[0], shared_secret[1], shared_secret[2], shared_secret[3]);
 
     // --- Step 4: Derive session key and decrypt ---
-    uint8_t session_key[32];
-    hkdf_sha512_32("Pair-Verify-Encrypt-Salt",
-                   "Pair-Verify-Encrypt-Info",
-                   local_priv, 32, session_key);
+    static const char pv_salt[] = "Pair-Verify-Encrypt-Salt";
+    static const char pv_info[] = "Pair-Verify-Encrypt-Info";
 
+    uint8_t session_key[32];
     uint8_t nonce_02[12];
     make_pv_nonce("PV-Msg02", nonce_02);
 
+    hkdf_sha512_32(pv_salt, pv_info, shared_secret, 32, session_key);
+    omote_log_i("%s: session_key[0..3]: %02X%02X%02X%02X\r\n", TAG,
+                session_key[0], session_key[1], session_key[2], session_key[3]);
+
     uint8_t decrypted[256];
     size_t  dec_len = sizeof(decrypted);
-    if (!chacha_decrypt(session_key, nonce_02,
-                        nullptr, 0,
-                        enc_data, enc_data_len,
-                        decrypted, &dec_len)) {
-        omote_log_e("%s: PV-Msg02 decrypt failed\r\n", TAG); return false;
+    if (!chacha_decrypt(session_key, nonce_02, nullptr, 0,
+                        enc_data, enc_data_len, decrypted, &dec_len)) {
+        omote_log_e("%s: PV-Msg02 decrypt failed\r\n", TAG);
+        return false;
     }
 
     // Extract identifier and signature from decrypted TLV8
@@ -1004,17 +1236,24 @@ static bool run_pair_verify(WiFiClient& c, const CompanionCredentials& creds) {
     if (sig_len != 64){ omote_log_e("%s: bad signature length %u\r\n", TAG, (unsigned)sig_len); return false; }
 
     // --- Step 5: Verify Ed25519 signature ---
-    // info = local_pub + atv_id + server_pub
+    // ATV signs: server_pub (ATV ephemeral pub) || atv_id || local_pub (our ephemeral pub)
+    omote_log_i("%s: Ed25519 verify: ATV sent id (%u B): '%.*s'\r\n", TAG,
+                (unsigned)id_len, (int)id_len, dev_identifier);
+    omote_log_i("%s: Ed25519 verify: creds atv_id  (%u B): '%.*s'\r\n", TAG,
+                (unsigned)creds.atv_id_len, (int)creds.atv_id_len, creds.atv_id);
+    omote_log_i("%s: Ed25519 verify: creds ltpk (first 4B): %02X%02X%02X%02X\r\n", TAG,
+                creds.ltpk[0], creds.ltpk[1], creds.ltpk[2], creds.ltpk[3]);
+
     uint8_t sig_info[32 + 64 + 32];
     size_t  si = 0;
-    memcpy(sig_info + si, local_pub, 32);               si += 32;
-    memcpy(sig_info + si, creds.atv_id, creds.atv_id_len); si += creds.atv_id_len;
     memcpy(sig_info + si, server_pub, 32);              si += 32;
+    memcpy(sig_info + si, dev_identifier, id_len);      si += id_len;
+    memcpy(sig_info + si, local_pub, 32);               si += 32;
 
     if (!Ed25519::verify(dev_signature, creds.ltpk, sig_info, si)) {
-        omote_log_e("%s: Ed25519 verify failed\r\n", TAG); return false;
+        omote_log_e("%s: Ed25519 verify failed - ltpk or atv_id is wrong\r\n", TAG); return false;
     }
-    omote_log_d("%s: Ed25519 verify OK\r\n", TAG);
+    omote_log_i("%s: Ed25519 verify OK\r\n", TAG);
 
     // --- Step 6: Sign our response ---
     // device_info = local_pub + client_id + server_pub
@@ -1076,8 +1315,8 @@ static bool run_pair_verify(WiFiClient& c, const CompanionCredentials& creds) {
     }
 
     // --- Step 8: Derive session encryption keys ---
-    hkdf_sha512_32("", "ClientEncrypt-main", local_priv, 32, g_session.output_key);
-    hkdf_sha512_32("", "ServerEncrypt-main", local_priv, 32, g_session.input_key);
+    hkdf_sha512_32("", "ClientEncrypt-main", shared_secret, 32, g_session.output_key);
+    hkdf_sha512_32("", "ServerEncrypt-main", shared_secret, 32, g_session.input_key);
 
     g_session.encrypted     = true;
     g_session.send_counter  = 0;
@@ -1103,7 +1342,7 @@ static bool send_recv_opack(WiFiClient& c, const uint8_t* payload, size_t len) {
 }
 
 static bool run_session_setup(WiFiClient& c) {
-    omote_log_d("%s: starting session setup\r\n", TAG);
+    omote_log_i("%s: starting session setup\r\n", TAG);
 
     uint8_t buf[RECV_BUF_SIZE];
     size_t  len;
@@ -1133,15 +1372,19 @@ static bool run_session_setup(WiFiClient& c) {
         if (!recv_decrypted(c, &rtype, rbuf, sizeof(rbuf), &rlen)) {
             omote_log_e("%s: _sessionStart recv failed\r\n", TAG); return false;
         }
-        // Try to find _sid in response _c sub-dict.
+        // Find _sid inside the _c sub-dict of the response.
         // Response is: {_t:3, _x:xid, _c: {_sid: remote_sid}, ...}
-        // We do a simple scan for "_sid" integer value
         uint32_t remote_sid = 0;
-        if (opack_find_uint32(rbuf, rlen, "_sid", &remote_sid)) {
+        uint32_t c_offset = 0, c_len = 0;
+        bool found_sid = false;
+        if (opack_find_subdict(rbuf, rlen, "_c", &c_offset, &c_len)) {
+            found_sid = opack_find_uint32(rbuf + c_offset, c_len, "_sid", &remote_sid);
+        }
+        if (found_sid) {
             g_session.sid = ((uint64_t)remote_sid << 32) | (uint64_t)local_sid;
             omote_log_d("%s: session SID=0x%llX\r\n", TAG, (unsigned long long)g_session.sid);
         } else {
-            omote_log_w("%s: could not parse remote_sid, proceeding anyway\r\n", TAG);
+            omote_log_w("%s: could not parse remote_sid from _c, proceeding anyway\r\n", TAG);
         }
     }
 
@@ -1176,18 +1419,35 @@ static void companion_task(void* pvParameters) {
 
         case ST_IDLE:
             if (WiFi.isConnected()) {
-                omote_log_d("%s: WiFi connected, will connect to ATV\r\n", TAG);
+                omote_log_i("%s: WiFi up, connecting to ATV at %s:%d\r\n", TAG, COMPANION_ATV_HOST, COMPANION_ATV_PORT);
                 state = ST_CONNECTING;
             } else {
+                omote_log_d("%s: waiting for WiFi...\r\n", TAG);
                 vTaskDelay(pdMS_TO_TICKS(1000));
             }
             break;
 
         case ST_CONNECTING:
-            omote_log_d("%s: connecting to %s:%d\r\n", TAG, COMPANION_ATV_HOST, COMPANION_ATV_PORT);
+            omote_log_i("%s: TCP connecting to %s:%d\r\n", TAG, COMPANION_ATV_HOST, COMPANION_ATV_PORT);
             if (g_client.connect(COMPANION_ATV_HOST, COMPANION_ATV_PORT)) {
                 g_client.setTimeout(5000);
                 omote_log_i("%s: TCP connected\r\n", TAG);
+                // Check if the ATV sends a greeting before we speak
+                vTaskDelay(pdMS_TO_TICKS(50));
+                {
+                    int avail = g_client.available();
+                    if (avail > 0) {
+                        uint8_t peek[16];
+                        size_t n = (avail < (int)sizeof(peek)) ? (size_t)avail : sizeof(peek);
+                        g_client.readBytes(peek, n);
+                        omote_log_i("%s: ATV sent %d greeting bytes first: %02X %02X %02X %02X...\r\n",
+                                    TAG, avail,
+                                    n > 0 ? peek[0] : 0, n > 1 ? peek[1] : 0,
+                                    n > 2 ? peek[2] : 0, n > 3 ? peek[3] : 0);
+                    } else {
+                        omote_log_i("%s: no greeting from ATV, proceeding with PairVerify\r\n", TAG);
+                    }
+                }
                 state = ST_PAIR_VERIFY;
             } else {
                 omote_log_w("%s: TCP connect failed, retry in 10s\r\n", TAG);
@@ -1287,6 +1547,8 @@ static void companion_task(void* pvParameters) {
 // ---------------------------------------------------------------------------
 
 void init_companion_HAL(void) {
+    run_crypto_selftest();
+
     if (!parse_credentials(COMPANION_CREDENTIALS, &g_creds)) {
         omote_log_e("%s: invalid credentials, companion disabled\r\n", TAG);
         return;

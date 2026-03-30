@@ -17,6 +17,7 @@ extern uint16_t COMPANION_LAUNCH_HBO_MAX;
 extern uint16_t COMPANION_LAUNCH_HULU;
 extern uint16_t COMPANION_LAUNCH_SPOTIFY;
 extern uint16_t COMPANION_LAUNCH_PLEX;
+extern uint16_t COMPANION_LAUNCH_HDHOMERUN;
 // Generic launcher: pass bundle ID via additionalPayload to executeCommand()
 extern uint16_t COMPANION_LAUNCH_CUSTOM;
 

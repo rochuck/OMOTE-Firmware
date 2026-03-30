@@ -13,6 +13,7 @@ uint16_t COMPANION_LAUNCH_HBO_MAX;
 uint16_t COMPANION_LAUNCH_HULU;
 uint16_t COMPANION_LAUNCH_SPOTIFY;
 uint16_t COMPANION_LAUNCH_PLEX;
+uint16_t COMPANION_LAUNCH_HDHOMERUN;
 uint16_t COMPANION_LAUNCH_CUSTOM;
 
 void register_device_appleTV_companion(void) {
@@ -42,6 +43,9 @@ void register_device_appleTV_companion(void) {
 
     register_command(&COMPANION_LAUNCH_PLEX,
         makeCommandData(COMPANION, {"launch", "com.plexapp.plex"}));
+
+    register_command(&COMPANION_LAUNCH_HDHOMERUN,
+        makeCommandData(COMPANION, {"launch", "com.silicondust.hdhomerun"}));
 
     // Custom: pass bundle ID via additionalPayload
     // e.g.: executeCommand(COMPANION_LAUNCH_CUSTOM, "com.example.myapp")

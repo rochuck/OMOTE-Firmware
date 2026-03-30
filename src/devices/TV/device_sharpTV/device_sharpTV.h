@@ -1,4 +1,5 @@
 #pragma once
+#include <stdint.h>
 
 // Only activate the commands that are used. Every command takes 100 bytes, wether used or not.
 // extern uint16_t SHARP_POWER_TOGGLE;
@@ -56,6 +57,7 @@ extern uint16_t SHARP_INPUT_HDMI_1;
 extern uint16_t SHARP_INPUT_HDMI_2;
 extern uint16_t SHARP_INPUT_HDMI_3;
 // extern uint16_t SHARP_INPUT_HDMI_4;
+extern uint16_t SHARP_INPUT_HDMI_5;
 // extern uint16_t SHARP_INPUT_COMPONENT;
 extern uint16_t SHARP_INPUT_TV;
 

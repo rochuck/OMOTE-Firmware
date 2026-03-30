@@ -291,7 +291,14 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
         if (!additionalPayload.empty()) param = additionalPayload;
         omote_log_d("execute: companion action '%s' param '%s'\r\n", action.c_str(), param.c_str());
         if (action == "launch" && !param.empty()) {
-            companion_launchApp_HAL(param);
+            omote_log_i("companion: connected=%s, launching '%s'\r\n",
+                        companion_isConnected_HAL() ? "yes" : "no", param.c_str());
+            bool queued = companion_launchApp_HAL(param);
+            if (queued) {
+                omote_log_i("companion: launch queued OK for '%s'\r\n", param.c_str());
+            } else {
+                omote_log_e("companion: launch FAILED to queue '%s' (not connected or queue full)\r\n", param.c_str());
+            }
         }
         break;
     }
