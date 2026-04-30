@@ -70,6 +70,24 @@ register_device_marantzAmp() {
     // register_command(&MARANTZ_SETMENU_DOWN        , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA19966"}));
     // register_command(&MARANTZ_SETMENU_MINUS       , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1CA35"}));
     // register_command(&MARANTZ_SETMENU_PLUS        , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA14AB5"}));
-    register_command(&MARANTZ_POWER_OFF, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x14c"}));
-    register_command(&MARANTZ_POWER_ON, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x14c"}));
+
+    // these seem to work for power on and power off
+    // https://github.com/Arduino-IRremote/Arduino-IRremote/discussions/1038
+    //
+
+    // Pronto: 0000 0071 0000 0024 ... (36 repeat pairs, ~36.7kHz → 36000)
+    register_command(&MARANTZ_POWER_ON,
+                     makeCommandData(IR,
+                                     {std::to_string(IR_PROTOCOL_GLOBALCACHE),
+                                      "36000,1,1,32,32,32,32,32,32,64,32,32,32,32,32,32,161,32,32,32,64,32,32,64,32,32,32,32,32,32,"
+                                      "32,32,32,32,32,32,64,32,2731,32,32,32,32,32,32,64,32,32,32,32,32,32,161,32,32,32,64,32,32,"
+                                      "64,32,32,32,32,32,32,32,32,32,32,32,32,64,32,1200"}));
+    // Discrete power-off from Pronto hex (biphase, two frames) converted to GlobalCache at 36kHz.
+    // Pronto: 0000 0071 0000 0022 ... (34 repeat pairs — two pairs shorter than ON)
+    register_command(&MARANTZ_POWER_OFF,
+                     makeCommandData(IR,
+                                     {std::to_string(IR_PROTOCOL_GLOBALCACHE),
+                                      "36000,1,1,32,32,32,32,32,32,64,32,32,32,32,32,32,161,32,32,32,64,32,32,64,32,32,32,32,32,32,"
+                                      "32,32,32,32,64,64,2731,32,32,32,32,32,32,64,32,32,32,32,32,32,161,32,32,32,64,32,32,64,32,"
+                                      "32,32,32,32,32,32,32,32,32,64,64,1200"}));
 }
