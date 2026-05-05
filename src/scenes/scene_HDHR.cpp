@@ -9,6 +9,7 @@
 #include "applicationInternal/commandHandler.h"
 #include "devices/AVreceiver/device_marantzAmp/device_marantzAmp.h"
 #include "devices/TV/device_sharpTV/device_sharpTV.h"
+#include "devices/mediaPlayer/device_appleTV/device_appleTV.h"
 // guis
 #include "devices/mediaPlayer/device_appleTV/gui_appleTV.h"
 #include "devices/mediaPlayer/device_hdhomerun/gui_hdhomerun.h"
@@ -45,7 +46,7 @@ scene_setKeys_TV() {
         {KEY_CHDOW, SHORT},
 
     };
-/* clang-format on */
+    /* clang-format on */
     key_commands_short_TV = {
 
         {KEY_STOP, SHARP_PAUSE},
@@ -56,7 +57,7 @@ scene_setKeys_TV() {
         {KEY_INFO, SHARP_MENU},
         {KEY_UP, SHARP_UP},
         {KEY_LEFT, SHARP_LEFT},
-        {KEY_OK, SHARP_SELECT},
+        {KEY_OK, APPLETV_OK},
         {KEY_RIGHT, SHARP_RIGHT},
         {KEY_DOWN, SHARP_DOWN},
         {KEY_SRC, SHARP_EXIT},
@@ -73,13 +74,17 @@ scene_setKeys_TV() {
 void
 scene_start_sequence_TV(void) {
     executeCommand(SHARP_POWER_ON);
-    delay(100);
+    delay(10);
     executeCommand(MARANTZ_POWER_ON);
+    delay(10);
+    executeCommand(APPLETV_POWER_ON);
     delay(1000);
     executeCommand(MARANTZ_INPUT_DVD);
-    delay(100);
+    delay(10);
     executeCommand(SHARP_INPUT_HDMI_5);
-    delay(100);
+    delay(12000);
+    executeCommand(APPLETV_OK); // Select account
+    delay(2000);
 #if (ENABLE_COMPANION == 1)
     executeCommand(COMPANION_LAUNCH_HDHOMERUN);
 #endif

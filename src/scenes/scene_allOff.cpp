@@ -7,6 +7,7 @@
 #include "applicationInternal/commandHandler.h"
 #include "devices/AVreceiver/device_marantzAmp/device_marantzAmp.h"
 #include "devices/TV/device_sharpTV/device_sharpTV.h"
+#include "devices/mediaPlayer/device_appleTV/device_appleTV.h"
 
 uint16_t SCENE_ALLOFF;       //"Scene_allOff"
 uint16_t SCENE_ALLOFF_FORCE; //"Scene_allOff_force"
@@ -33,23 +34,15 @@ scene_setKeys_allOff() {
 void
 scene_start_sequence_allOff(void) {
     executeCommand(SHARP_POWER_OFF);
-    delay(500);
+    delay(10);
     executeCommand(MARANTZ_POWER_OFF);
-    delay(500);
+    delay(10);
     // repeat IR to be sure
-    executeCommand(SHARP_POWER_OFF);
-    delay(500);
     executeCommand(MARANTZ_POWER_OFF);
-    delay(500);
-    // repeat IR to be sure
-    executeCommand(SHARP_POWER_OFF);
-    delay(500);
-    executeCommand(MARANTZ_POWER_OFF);
-    delay(500);
-    // you cannot power off FireTV, but at least you can stop the currently running app
-    executeCommand(KEYBOARD_HOME);
-    delay(500);
-    executeCommand(KEYBOARD_HOME);
+    delay(10);
+    executeCommand(APPLETV_POWER_OFF);
+
+
 }
 
 void

@@ -4,6 +4,10 @@
 #include "applicationInternal/gui/guiRegistry.h"
 #include "devices/AVreceiver/device_marantzAmp/device_marantzAmp.h"
 #include "devices/TV/device_sharpTV/device_sharpTV.h"
+#include "devices/mediaPlayer/device_appleTV/device_appleTV.h"
+#if (ENABLE_COMPANION == 1)
+#include "devices/mediaPlayer/device_appleTV_companion/device_appleTV_companion.h"
+#endif
 #include <lvgl.h>
 
 static void
@@ -15,6 +19,11 @@ button_clicked_event_cb(lv_event_t* e) {
     if (user_data == 2) { executeCommand(MARANTZ_POWER_OFF); }
     if (user_data == 3) { executeCommand(SHARP_POWER_ON); }
     if (user_data == 4) { executeCommand(SHARP_POWER_OFF); }
+    if (user_data == 5) { executeCommand(APPLETV_POWER_ON); }
+    if (user_data == 6) { executeCommand(APPLETV_POWER_OFF); }
+#if (ENABLE_COMPANION == 1)
+    if (user_data == 7) { executeCommand(COMPANION_LAUNCH_HDHOMERUN); }
+#endif
 }
 
 lv_obj_t* ui_Image1;
@@ -93,6 +102,47 @@ create_tab_content_marantzAmp(lv_obj_t* tab) {
     lv_obj_t* label7 = lv_label_create(button7);
     lv_label_set_text(label7, "Sharp OFF");
     lv_obj_center(label7);
+
+    // -- create a button for "Apple TV ON" on top right ----------------------------------------
+    lv_obj_t* button_appletv_on = lv_btn_create(ui_Image1);
+    lv_obj_add_flag(button_appletv_on, LV_OBJ_FLAG_FLOATING);
+    lv_obj_set_size(button_appletv_on, 80, 40);
+    lv_obj_align(button_appletv_on, LV_ALIGN_TOP_RIGHT, -5, 5);
+    lv_obj_set_style_radius(button_appletv_on, 10, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(button_appletv_on, color_primary, LV_PART_MAIN);
+    lv_obj_add_event_cb(button_appletv_on, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 5);
+
+    lv_obj_t* label_appletv_on = lv_label_create(button_appletv_on);
+    lv_label_set_text(label_appletv_on, "ATV ON");
+    lv_obj_center(label_appletv_on);
+
+    // -- create a button for "Apple TV OFF" on top right ----------------------------------------
+    lv_obj_t* button_appletv_off = lv_btn_create(ui_Image1);
+    lv_obj_add_flag(button_appletv_off, LV_OBJ_FLAG_FLOATING);
+    lv_obj_set_size(button_appletv_off, 80, 40);
+    lv_obj_align(button_appletv_off, LV_ALIGN_TOP_RIGHT, -5, 50);
+    lv_obj_set_style_radius(button_appletv_off, 10, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(button_appletv_off, color_primary, LV_PART_MAIN);
+    lv_obj_add_event_cb(button_appletv_off, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 6);
+
+    lv_obj_t* label_appletv_off = lv_label_create(button_appletv_off);
+    lv_label_set_text(label_appletv_off, "ATV OFF");
+    lv_obj_center(label_appletv_off);
+
+#if (ENABLE_COMPANION == 1)
+    // -- create a button for "HDHR" launching HDHomeRun via companion ----------------------------------------
+    lv_obj_t* button_hdhr = lv_btn_create(ui_Image1);
+    lv_obj_add_flag(button_hdhr, LV_OBJ_FLAG_FLOATING);
+    lv_obj_set_size(button_hdhr, 80, 40);
+    lv_obj_align(button_hdhr, LV_ALIGN_TOP_RIGHT, -5, 95);
+    lv_obj_set_style_radius(button_hdhr, 10, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(button_hdhr, color_primary, LV_PART_MAIN);
+    lv_obj_add_event_cb(button_hdhr, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 7);
+
+    lv_obj_t* label_hdhr = lv_label_create(button_hdhr);
+    lv_label_set_text(label_hdhr, "HDHR");
+    lv_obj_center(label_hdhr);
+#endif
 }
 
 void
