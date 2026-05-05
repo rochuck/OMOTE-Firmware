@@ -24,7 +24,7 @@ uint16_t SCENE_TV_FORCE; //"Scene_tv_force"
 std::map<char, repeatModes> key_repeatModes_TV;
 std::map<char, uint16_t>    key_commands_short_TV;
 std::map<char, uint16_t>    key_commands_long_TV;
-
+/* clang-format off */
 void
 scene_setKeys_TV() {
     key_repeatModes_TV = {
@@ -45,7 +45,7 @@ scene_setKeys_TV() {
         {KEY_CHDOW, SHORT},
 
     };
-
+/* clang-format on */
     key_commands_short_TV = {
 
         {KEY_STOP, SHARP_PAUSE},
@@ -74,20 +74,12 @@ void
 scene_start_sequence_TV(void) {
     executeCommand(SHARP_POWER_ON);
     delay(100);
-    executeCommand(SHARP_POWER_ON);
-    delay(100);
-    executeCommand(SHARP_POWER_ON);
-    delay(100);
     executeCommand(MARANTZ_POWER_ON);
-    delay(100);
-    executeCommand(MARANTZ_POWER_ON);
-    delay(100);
-    executeCommand(MARANTZ_POWER_ON);
-    delay(100);
+    delay(1000);
     executeCommand(MARANTZ_INPUT_DVD);
-    delay(3000);
+    delay(100);
     executeCommand(SHARP_INPUT_HDMI_5);
-    delay(2000);
+    delay(100);
 #if (ENABLE_COMPANION == 1)
     executeCommand(COMPANION_LAUNCH_HDHOMERUN);
 #endif

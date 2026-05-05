@@ -3,6 +3,20 @@
 This is my fork of the OMOTE code.
 My notes are here first....
 
+## Platform Port: espressif32 6.10.0 → 7.0.0
+
+The firmware has been ported to **espressif32 7.0.0** (Arduino ESP32 3.x / ESP-IDF 5.3.x) with NimBLE-Arduino 2.0.x. 
+
+**Key changes:**
+- LEDC PWM API updated (GPIO-based instead of channel-based)
+- NimBLE 1.4.x → 2.0.x with automatic bond format migration on first boot
+- WebSocket client return types fixed for IDF 5.x
+- 14 targeted edits across 7 files; clean compile
+
+For full migration details, see `~/.claude/projects/OMOTE-Firmware/plans/reactive-fluttering-nova.md` (local development plan).
+
+On first boot after upgrading, NimBLE 2.x will automatically erase old 1.4.x bond data and reboot once — this is normal. Re-pair your BLE peers after the upgrade.
+
 ## OTA (Over-the-Air) Updates
 
 OTA is enabled for the `esp32-s3-Rev5andHigher` environment. After flashing once via USB with the new partition table, subsequent firmware updates can be pushed wirelessly.

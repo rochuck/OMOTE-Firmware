@@ -1,12 +1,12 @@
 #include <sstream>
 #include "BleKeyboard.h"
+#include <Arduino.h>
 
 #include <NimBLEDevice.h>
 #include <NimBLEServer.h>
 #include <NimBLEUtils.h>
 #include <NimBLEHIDDevice.h>
 #include "HIDTypes.h"
-#include <driver/adc.h>
 #include "sdkconfig.h"
 
 
@@ -137,10 +137,10 @@ void BleKeyboard::begin(void)
 
   #if !defined(NIMBLE_ARDUINO_2_x)
   hid->reportMap((uint8_t*)_hidReportDescriptor, sizeof(_hidReportDescriptor));
+  hid->startServices();
   #else
   hid->setReportMap((uint8_t*)_hidReportDescriptor, sizeof(_hidReportDescriptor));
   #endif
-  hid->startServices();
 
   advertising = pServer->getAdvertising();
   advertising->setAppearance(HID_KEYBOARD);

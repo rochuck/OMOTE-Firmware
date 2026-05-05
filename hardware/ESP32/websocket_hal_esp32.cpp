@@ -90,7 +90,7 @@ websocket_sub_HAL(const char* entity_list) {
     if (!is_subscribed) {
         if (is_connected) {
             // Subscribe to all events
-            esp_err_t ret = esp_websocket_client_send_text(client, entity_list, strlen(entity_list), portMAX_DELAY);
+            int ret = esp_websocket_client_send_text(client, entity_list, strlen(entity_list), portMAX_DELAY);
             if (ret >= 0) { printf("Subscribed to entities: %s\n", entity_list); }
             is_subscribed = true;
         }
@@ -149,7 +149,7 @@ websocket_send_HAL(const char* topic, const char* payload) {
     if (service_data_item) cJSON_AddItemToObject(root, service_data_item->string, service_data_item);
 
     char* msg = cJSON_PrintUnformatted(root);
-    int   ret = esp_websocket_client_send_text(client, msg, strlen(msg), portMAX_DELAY);
+    int ret = esp_websocket_client_send_text(client, msg, strlen(msg), portMAX_DELAY);
 
     if (ret >= 0) {
         Serial.printf("Sent turn_on: %s\n", msg);

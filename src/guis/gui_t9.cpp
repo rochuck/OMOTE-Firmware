@@ -7,7 +7,7 @@
 
 #include "applicationInternal/commandHandler.h"
 #include "applicationInternal/scenes/sceneHandler.h"
-#include "devices/TV/device_samsungTV/device_samsungTV.h"
+#include "devices/TV/device_sharpTV/device_sharpTV.h"
 #include "scenes/scene_HDHR.h"
 #include "scenes/scene_fireTV.h"
 
@@ -21,16 +21,16 @@ virtualT9_event_cb(lv_event_t* e) {
     int user_data = (intptr_t) (target->user_data);
     // send corrensponding number
     if (gui_memoryOptimizer_getActiveSceneName() == scene_name_TV) {
-        uint16_t virtualKeyMapTVNumbers[10] = {SAMSUNG_NUM_1,
-                                               SAMSUNG_NUM_2,
-                                               SAMSUNG_NUM_3,
-                                               SAMSUNG_NUM_4,
-                                               SAMSUNG_NUM_5,
-                                               SAMSUNG_NUM_6,
-                                               SAMSUNG_NUM_7,
-                                               SAMSUNG_NUM_8,
-                                               SAMSUNG_NUM_9,
-                                               SAMSUNG_NUM_0};
+        uint16_t virtualKeyMapTVNumbers[10] = {SHARP_NUM_1,
+                                               SHARP_NUM_2,
+                                               SHARP_NUM_3,
+                                               SHARP_NUM_4,
+                                               SHARP_NUM_5,
+                                               SHARP_NUM_6,
+                                               SHARP_NUM_7,
+                                               SHARP_NUM_8,
+                                               SHARP_NUM_9,
+                                               SHARP_NUM_0};
         uint16_t command                    = virtualKeyMapTVNumbers[user_data];
         executeCommand(command);
 

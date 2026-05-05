@@ -95,10 +95,24 @@ void init_keys_HAL(void) {
   keypad.writeRegister(TCA8418_REG_CFG, 0b00000001);
   keypad.writeRegister(TCA8418_REG_GPI_EM_1, 0b00111111);
   keypad.writeRegister(TCA8418_REG_GPI_EM_2, 0b00011111); // disable interrupt for COL5 (USB_3V3)
-  
-  ledcSetup(LEDC_CHANNEL_6, 5000, 8);
-  ledcAttachPin(KBD_BL_GPIO, LEDC_CHANNEL_6);
-  ledcWrite(LEDC_CHANNEL_6, 0);
+
+  ledc_channel_config_t ledc_kbd = {};
+  ledc_kbd.gpio_num   = (gpio_num_t) KBD_BL_GPIO;
+  ledc_kbd.speed_mode = LEDC_LOW_SPEED_MODE;
+  ledc_kbd.channel    = LEDC_CHANNEL_6;
+  ledc_kbd.intr_type  = LEDC_INTR_DISABLE;
+  ledc_kbd.timer_sel  = LEDC_TIMER_2;
+  ledc_kbd.duty       = 0;
+  ledc_kbd.hpoint     = 0;
+  ledc_channel_config(&ledc_kbd);
+
+  ledc_timer_config_t ledc_kbd_timer = {};
+  ledc_kbd_timer.speed_mode      = LEDC_LOW_SPEED_MODE;
+  ledc_kbd_timer.duty_resolution = LEDC_TIMER_8_BIT;
+  ledc_kbd_timer.timer_num       = LEDC_TIMER_2;
+  ledc_kbd_timer.freq_hz         = 5000;
+  ledc_kbd_timer.clk_cfg         = LEDC_AUTO_CLK;
+  ledc_timer_config(&ledc_kbd_timer);
 
   #else
   // Button Pin Definition
@@ -230,13 +244,16 @@ void update_keyboardBrightness_HAL(void) {
   if (millis() < fadeInTimer + keyboardBrightness) {
     // after boot or wakeup, fade in keyboard brightness
     // fade in lasts for <keyboardBrightness> ms
-    ledcWrite(LEDC_CHANNEL_6, millis() - fadeInTimer);
+    int duty = millis() - fadeInTimer;
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_6, duty);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_6);
   }
   else {
-    // normal mode, set full keyboardBrightness    
+    // normal mode, set full keyboardBrightness
     // turn off PWM if keyboard is at full brightness
     if(keyboardBrightness < 255){
-      ledcWrite(LEDC_CHANNEL_6, keyboardBrightness);
+      ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_6, keyboardBrightness);
+      ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_6);
     }
     else{
       ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_6, 255);

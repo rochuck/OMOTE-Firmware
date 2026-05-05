@@ -3,6 +3,7 @@
 #include "applicationInternal/gui/guiBase.h"
 #include "applicationInternal/gui/guiRegistry.h"
 #include "devices/AVreceiver/device_marantzAmp/device_marantzAmp.h"
+#include "devices/TV/device_sharpTV/device_sharpTV.h"
 #include <lvgl.h>
 
 static void
@@ -12,6 +13,8 @@ button_clicked_event_cb(lv_event_t* e) {
     if (user_data == 0) { executeCommand(MARANTZ_SDIRECT); }
     if (user_data == 1) { executeCommand(MARANTZ_POWER_ON); }
     if (user_data == 2) { executeCommand(MARANTZ_POWER_OFF); }
+    if (user_data == 3) { executeCommand(SHARP_POWER_ON); }
+    if (user_data == 4) { executeCommand(SHARP_POWER_OFF); }
 }
 
 lv_obj_t* ui_Image1;
@@ -68,6 +71,28 @@ create_tab_content_marantzAmp(lv_obj_t* tab) {
     lv_obj_t* label5 = lv_label_create(button5);
     lv_label_set_text(label5, "ON");
     lv_obj_center(label5);
+
+    // -- create a button for "Sharp ON" ----------------------------------------
+    lv_obj_t* button6 = lv_btn_create(ui_Image1);
+    lv_obj_set_size(button6, 80, 40);
+    lv_obj_set_style_radius(button6, 10, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(button6, color_primary, LV_PART_MAIN);
+    lv_obj_add_event_cb(button6, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 3);
+
+    lv_obj_t* label6 = lv_label_create(button6);
+    lv_label_set_text(label6, "Sharp ON");
+    lv_obj_center(label6);
+
+    // -- create a button for "Sharp OFF" ----------------------------------------
+    lv_obj_t* button7 = lv_btn_create(ui_Image1);
+    lv_obj_set_size(button7, 80, 40);
+    lv_obj_set_style_radius(button7, 10, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(button7, color_primary, LV_PART_MAIN);
+    lv_obj_add_event_cb(button7, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 4);
+
+    lv_obj_t* label7 = lv_label_create(button7);
+    lv_label_set_text(label7, "Sharp OFF");
+    lv_obj_center(label7);
 }
 
 void

@@ -30,7 +30,7 @@
 #include "devices/keyboard/device_keyboard_ble/device_keyboard_ble.h"
 #endif // ENABLE_KEYBOARD_BLE
 //   TV
-#include "devices/TV/device_samsungTV/device_samsungTV.h"
+#include "devices/TV/device_sharpTV/device_sharpTV.h"
 // #include "devices/TV/device_lgTV/device_lgTV.h"
 // #include "devices/TV/device_sonyTV/device_sonyTV.h.h"
 //    AV receiver
@@ -132,7 +132,7 @@ main(int argc, char* argv[]) {
     // register commands for the devices
     register_specialCommands();
     //   TV
-    register_device_samsungTV();
+    register_device_sharpTV();
     // register_device_lgTV();
     // register_device_sonyTV();
     //    AV receiver
