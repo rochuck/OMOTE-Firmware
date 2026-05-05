@@ -11,11 +11,6 @@ The firmware has been ported to **espressif32 7.0.0** (Arduino ESP32 3.x / ESP-I
 - LEDC PWM API updated (GPIO-based instead of channel-based)
 - NimBLE 1.4.x → 2.0.x with automatic bond format migration on first boot
 - WebSocket client return types fixed for IDF 5.x
-- 14 targeted edits across 7 files; clean compile
-
-For full migration details, see `~/.claude/projects/OMOTE-Firmware/plans/reactive-fluttering-nova.md` (local development plan).
-
-On first boot after upgrading, NimBLE 2.x will automatically erase old 1.4.x bond data and reboot once — this is normal. Re-pair your BLE peers after the upgrade.
 
 ## OTA (Over-the-Air) Updates
 
@@ -104,6 +99,44 @@ The connection is maintained in a FreeRTOS background task (core 0). After the f
 ### Disabling Companion
 
 The feature is `#if (ENABLE_COMPANION == 1)` gated. It is off by default (`ENABLE_COMPANION=0` in `[env]`) and enabled only in `[env:esp32-s3-Rev5andHigher]`. To disable it there, change `-D ENABLE_COMPANION=1` to `-D ENABLE_COMPANION=0` in [platformio.ini](platformio.ini) — no other source files need touching.
+
+## Home Assistant WebSocket Integration
+
+The `esp32-s3-Rev5andHigher` environment includes native WebSocket support for Home Assistant, allowing direct control of lights and other entities without MQTT. This uses Home Assistant's native WebSocket API for real-time, low-latency communication.
+
+### Configuration
+
+Set the Home Assistant WebSocket URL in `src/secrets_override.h`:
+
+```cpp
+#define WS_URL "ws://192.168.x.x:8123/api/websocket"  // Your Home Assistant IP and port
+```
+
+Port 8123 is Home Assistant's default WebSocket port. If your Home Assistant is behind a reverse proxy or on a different port, adjust accordingly.
+
+### Adding Entities
+
+Entities (lights, etc.) are configured in [`src/devices/misc/device_smarthome/gui_smarthome.cpp`](src/devices/misc/device_smarthome/gui_smarthome.cpp). The entity map defines which Home Assistant entities are controllable from the remote:
+
+```cpp
+void init_entity_maps(void) {
+    entity_item* e;
+    ADD_ENTITY("friendly_name", "light.your_entity_id", "Display Label");
+}
+```
+
+Add entries for each light you want to control. The entity ID can be found in Home Assistant's UI under **Settings → Devices & Services → Entities**.
+
+### Features
+
+- **Toggle Lights**: Turn lights on/off via touch/button in the Smart Home scene
+- **Brightness Control**: Adjust brightness with a slider for dimmable lights
+- **Real-time State**: Light states are updated when changed elsewhere in Home Assistant
+- **No Authentication Required**: Uses Home Assistant's local network; configure access control via firewall
+
+### Disabling WebSocket
+
+The feature is `#if (ENABLE_WEBSOCKET == 1)` gated. It is enabled by default in `[env:esp32-s3-Rev5andHigher]`. To disable it, change `-D ENABLE_WEBSOCKET=1` to `-D ENABLE_WEBSOCKET=0` in [platformio.ini](platformio.ini) — this frees ~10 KB of firmware space if needed.
 
 ---
 
