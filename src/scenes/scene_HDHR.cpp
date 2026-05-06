@@ -30,39 +30,27 @@ void
 scene_setKeys_TV() {
     key_repeatModes_TV = {
 
-        {KEY_STOP, SHORT_REPEATED},
-        {KEY_REWI, SHORT},
-        {KEY_PLAY, SHORT},
-        {KEY_FORW, SHORT_REPEATED},
-        {KEY_CONF, SHORT},
-        {KEY_INFO, SHORT},
-        {KEY_UP, SHORT_REPEATED},
-        {KEY_LEFT, SHORT_REPEATED},
-        {KEY_OK, SHORT},
-        {KEY_RIGHT, SHORT_REPEATED},
-        {KEY_DOWN, SHORT_REPEATED},
-        {KEY_SRC, SHORT},
-        {KEY_CHUP, SHORT},
-        {KEY_CHDOW, SHORT},
+        {KEY_STOP,  SHORT_REPEATED   },    {KEY_REWI,  SHORT            },    {KEY_PLAY,  SHORT            },    {KEY_FORW,  SHORT_REPEATED   },
+        {KEY_CONF,  SHORT            },                                                                          {KEY_INFO,  SHORT            },
+                                                             {KEY_UP,    SHORT_REPEATED   },
+                          {KEY_LEFT,  SHORT_REPEATED   },    {KEY_OK,    SHORT            },    {KEY_RIGHT, SHORT_REPEATED   },
+                                                             {KEY_DOWN,  SHORT_REPEATED   },
+                                                                                                                 {KEY_SRC,   SHORT            },
+                                                                                                                 {KEY_CHUP,  SHORT            },
+                                                                                                                 {KEY_CHDOW, SHORT            },
 
     };
-    /* clang-format on */
+
     key_commands_short_TV = {
 
-        {KEY_STOP, SHARP_PAUSE},
-        {KEY_REWI, SHARP_REWIND},
-        {KEY_PLAY, SHARP_PLAY},
-        {KEY_FORW, SHARP_FASTFORWARD},
-        {KEY_CONF, SHARP_GUIDE},
-        {KEY_INFO, SHARP_MENU},
-        {KEY_UP, SHARP_UP},
-        {KEY_LEFT, SHARP_LEFT},
-        {KEY_OK, APPLETV_OK},
-        {KEY_RIGHT, SHARP_RIGHT},
-        {KEY_DOWN, SHARP_DOWN},
-        {KEY_SRC, SHARP_EXIT},
-        {KEY_CHUP, SHARP_CHANNEL_UP},
-        {KEY_CHDOW, SHARP_CHANNEL_DOWN},
+        {KEY_STOP,  APPLETV_PAUSE             },    {KEY_REWI,  APPLETV_10_SECOND_BACK    },    {KEY_PLAY,  APPLETV_PLAY              },    {KEY_FORW,  APPLETV_10_SECOND_FOREWARD},
+        {KEY_CONF,  SHARP_GUIDE               },                                                                                              {KEY_INFO,  APPLETV_MENU              },
+                                                                    {KEY_UP,    APPLETV_UP                },
+                            {KEY_LEFT,  APPLETV_LEFT              },    {KEY_OK,    APPLETV_OK                },    {KEY_RIGHT, APPLETV_RIGHT             },
+                                                                    {KEY_DOWN,  APPLETV_DOWN              },
+                                                                                                                                              {KEY_SRC,   APPLETV_HOME              },
+                                                                                                                                              {KEY_CHUP,  SHARP_CHANNEL_UP          },
+                                                                                                                                              {KEY_CHDOW, SHARP_CHANNEL_DOWN        },
 
     };
 
@@ -70,6 +58,7 @@ scene_setKeys_TV() {
 
     };
 }
+/* clang-format on */
 
 void
 scene_start_sequence_TV(void) {
@@ -93,9 +82,9 @@ scene_start_sequence_TV(void) {
 void
 scene_end_sequence_TV(void) {}
 
-std::string scene_name_TV = "TV HDHOMERUN";
-// t_gui_list scene_TV_gui_list = {tabName_hdhomerun};
-t_gui_list scene_TV_gui_list = {tabName_t9};
+std::string scene_name_TV     = "TV HDHOMERUN";
+t_gui_list  scene_TV_gui_list = {tabName_hdhomerun};
+// t_gui_list scene_TV_gui_list = {tabName_t9};
 
 void
 register_scene_TV(void) {
