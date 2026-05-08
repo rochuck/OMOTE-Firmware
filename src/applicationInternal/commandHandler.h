@@ -110,6 +110,9 @@ enum commandHandlers {
 #if (ENABLE_COMPANION == 1)
     COMPANION,
 #endif
+#if (ENABLE_KODI == 1)
+    KODI,
+#endif
 };
 
 struct commandData {

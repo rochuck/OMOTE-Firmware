@@ -19,3 +19,6 @@
 #if (ENABLE_COMPANION == 1)
 #include "ESP32/companion_hal_esp32.h"
 #endif
+#if (ENABLE_KODI == 1)
+#include "ESP32/kodi_hal_esp32.h"
+#endif

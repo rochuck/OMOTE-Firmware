@@ -100,6 +100,72 @@ The connection is maintained in a FreeRTOS background task (core 0). After the f
 
 The feature is `#if (ENABLE_COMPANION == 1)` gated. It is off by default (`ENABLE_COMPANION=0` in `[env]`) and enabled only in `[env:esp32-s3-Rev5andHigher]`. To disable it there, change `-D ENABLE_COMPANION=1` to `-D ENABLE_COMPANION=0` in [platformio.ini](platformio.ini) — no other source files need touching.
 
+## Kodi (JSON-RPC)
+
+The Kodi scene controls a [Kodi](https://kodi.tv) media player over HTTP using the [JSON-RPC API](https://kodi.wiki/view/JSON-RPC_API). No pairing, no IR, no special hardware — just WiFi.
+
+### Enable Kodi's HTTP control
+
+In Kodi, go to **Settings → Services → Control** and enable:
+
+- **Allow remote control via HTTP** → **On**
+- **Port** → `8080` (default)
+- **Username** / **Password** → optional, but recommended on a shared network
+
+If the menu items are missing, switch the settings level to **Advanced** (cog icon at the bottom).
+
+### Find your Kodi host's IP
+
+From the Kodi machine: **Settings → System Info → Network** shows the IP. Or check your router's DHCP table.
+
+### Configure the remote
+
+Add to `src/secrets_override.h` (create it from `secrets_override_example.h` if it doesn't exist):
+
+```cpp
+#undef KODI_HOST
+#undef KODI_PORT
+#undef KODI_USER
+#undef KODI_PASS
+
+#define KODI_HOST "192.168.x.x"   // your Kodi machine's IP
+#define KODI_PORT 8080            // matches the Kodi setting above
+#define KODI_USER ""              // leave blank if no auth
+#define KODI_PASS ""
+```
+
+### Test it
+
+Once flashed and on WiFi, the Kodi scene's D-pad / OK / Back / Home / transport / volume keys map to Kodi's `Input.*` and `Input.ExecuteAction` JSON-RPC methods. You can also fire commands from any scene:
+
+```cpp
+executeCommand(KODI_PLAY_PAUSE);
+executeCommand(KODI_HOME);
+executeCommand(KODI_VOLUME_UP);
+
+// Custom action - pass any Kodi action string:
+// https://kodi.wiki/view/Action_IDs
+executeCommand(KODI_ACTION_CUSTOM, "{\"action\":\"osd\"}");
+executeCommand(KODI_ACTION_CUSTOM, "{\"action\":\"fullscreen\"}");
+```
+
+### Verify from the command line
+
+To sanity-check that Kodi's HTTP API is reachable before pointing the remote at it:
+
+```bash
+curl -s -u USER:PASS \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"Input.Home","id":1}' \
+  http://192.168.x.x:8080/jsonrpc
+```
+
+If you get back `{"id":1,"jsonrpc":"2.0","result":"OK"}` and Kodi jumps to the home screen, you're set.
+
+### Disabling Kodi
+
+The feature is `#if (ENABLE_KODI == 1)` gated. It is enabled by default in `[env]`. To disable it, change `-D ENABLE_KODI=1` to `-D ENABLE_KODI=0` in [platformio.ini](platformio.ini) — no other source files need touching.
+
 ## Home Assistant WebSocket Integration
 
 The `esp32-s3-Rev5andHigher` environment includes native WebSocket support for Home Assistant, allowing direct control of lights and other entities without MQTT. This uses Home Assistant's native WebSocket API for real-time, low-latency communication.

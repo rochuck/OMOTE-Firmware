@@ -6,6 +6,17 @@
 #include "applicationInternal/commandHandler.h"
 #include "applicationInternal/omote_log.h"
 #include "guis/gui_sceneSelection.h"
+#include "scenes/scene_appleTV.h"
+#include "scenes/scene_kodi.h"
+
+LV_IMG_DECLARE(kodiSelectIcon);
+LV_IMG_DECLARE(appleSelectIcon);
+
+static const lv_img_dsc_t* icon_for_scene(const std::string& scene_name) {
+  if (scene_name == scene_name_appleTV) return &appleSelectIcon;
+  if (scene_name == scene_name_kodi)    return &kodiSelectIcon;
+  return NULL;
+}
 
 static uint16_t activate_scene_command;
 static bool doForceScene;
@@ -109,9 +120,15 @@ void create_tab_content_sceneSelection(lv_obj_t* tab) {
       lv_obj_set_style_bg_color(button, color_primary, LV_PART_MAIN);
       lv_obj_add_event_cb(button, sceneSelection_event_cb, LV_EVENT_CLICKED,       (void *)(intptr_t)i);
       lv_obj_add_event_cb(button, sceneSelection_event_cb, LV_EVENT_SHORT_CLICKED, (void *)(intptr_t)i);
-      //lv_obj_add_event_cb(button, sceneSelection_event_cb, LV_EVENT_PRESSED,       (void *)(intptr_t)i);
-      //lv_obj_add_event_cb(button, sceneSelection_event_cb, LV_EVENT_RELEASED,      (void *)(intptr_t)i);
-  
+
+      const lv_img_dsc_t* icon_src = icon_for_scene(scenes->at(i));
+      if (icon_src != NULL) {
+        lv_obj_t* icon = lv_img_create(button);
+        lv_img_set_src(icon, icon_src);
+        lv_obj_align(icon, LV_ALIGN_LEFT_MID, 8, 0);
+        lv_obj_add_flag(icon, LV_OBJ_FLAG_FLOATING);
+      }
+
       lv_obj_t* label = lv_label_create(button);
       lv_label_set_text(label, scenes->at(i).c_str());
       lv_obj_center(label);

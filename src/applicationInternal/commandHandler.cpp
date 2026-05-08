@@ -303,6 +303,22 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
         break;
     }
 #endif
+
+#if (ENABLE_KODI == 1)
+    case KODI: {
+        // Payload format: { "method", "params_json" }
+        // e.g. { "Input.Up", "{}" } or { "Input.ExecuteAction", "{\"action\":\"home\"}" }
+        // additionalPayload, when non-empty, overrides the registered params (used for parameterized commands).
+        auto        it     = commandData.commandPayloads.begin();
+        std::string method = *it++;
+        std::string params = (it != commandData.commandPayloads.end()) ? *it : "{}";
+        if (!additionalPayload.empty()) params = additionalPayload;
+        omote_log_d("execute: kodi method '%s' params '%s'\r\n", method.c_str(), params.c_str());
+        bool ok = kodi_sendRpc_HAL(method, params);
+        if (!ok) { omote_log_e("kodi: RPC '%s' failed\r\n", method.c_str()); }
+        break;
+    }
+#endif
     }
 }
 

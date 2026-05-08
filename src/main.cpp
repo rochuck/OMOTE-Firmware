@@ -44,6 +44,9 @@
 #if (ENABLE_COMPANION == 1)
 #include "devices/mediaPlayer/device_appleTV_companion/device_appleTV_companion.h"
 #endif
+#if (ENABLE_KODI == 1)
+#include "devices/mediaPlayer/device_kodi/device_kodi.h"
+#endif
 // #include "devices/mediaPlayer/device_lgbluray/device_lgbluray.h"
 // #include "devices/mediaPlayer/device_samsungbluray/device_samsungbluray.h"
 // #include "devices/mediaPlayer/device_shield/device_shield.h"
@@ -74,6 +77,7 @@
 #include "scenes/scene_allOff.h"
 #include "scenes/scene_appleTV.h"
 #include "scenes/scene_chromecast.h"
+#include "scenes/scene_kodi.h"
 
 #if defined(ARDUINO)
 /**
@@ -143,6 +147,9 @@ main(int argc, char* argv[]) {
 #if (ENABLE_COMPANION == 1)
     register_device_appleTV_companion();
 #endif
+#if (ENABLE_KODI == 1)
+    register_device_kodi();
+#endif
     // register_device_lgbluray();
     // register_device_samsungbluray();
     // register_device_shield();
@@ -190,10 +197,11 @@ main(int argc, char* argv[]) {
     register_scene_defaultKeys();
     register_scene_appleTV();
     register_scene_chromecast();
+    register_scene_kodi();
     register_scene_allOff();
     // Only show these scenes on the sceneSelection gui. If you don't set this explicitely, by default all registered scenes are
     // shown.
-    set_scenes_on_sceneSelectionGUI({scene_name_appleTV, scene_name_chromecast});
+    set_scenes_on_sceneSelectionGUI({scene_name_appleTV, scene_name_kodi, scene_name_chromecast});
 
     // init GUI - will initialize tft, touch and lvgl
     init_gui(); // This has to come before any other i2c devices are initialized, otherwise the i2c bus will not be powered
@@ -223,6 +231,10 @@ main(int argc, char* argv[]) {
 #if (ENABLE_COMPANION == 1)
     // Companion task connects lazily once WiFi is up; safe to init here.
     init_companion_HAL();
+#endif
+
+#if (ENABLE_KODI == 1)
+    init_kodi_HAL();
 #endif
 
 #if (ENABLE_OTA == 1)

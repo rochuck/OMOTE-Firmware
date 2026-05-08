@@ -17,6 +17,15 @@
 #define WS_URL "ws://HA_IP:8123/api/websocket" // override it in file "secrets_override.h"
 #define WS_TOKEN "your ha token"               // override it in file "secrets_override.h"
 
+// --- Kodi JSON-RPC -------------------------------------------------------
+// Kodi must have "Allow remote control via HTTP" enabled in
+//   Settings -> Services -> Control
+// If you set a username/password there, fill them in below; otherwise leave blank.
+#define KODI_HOST "192.168.1.50" // override in secrets_override.h
+#define KODI_PORT 8080            // override in secrets_override.h
+#define KODI_USER ""              // override in secrets_override.h (blank = no auth)
+#define KODI_PASS ""              // override in secrets_override.h
+
 // --- Apple TV Companion Protocol ----------------------------------------
 // To get credentials, on a Mac with pyatv installed:
 //   atvremote --id <ATV_ID> --protocol companion pair
