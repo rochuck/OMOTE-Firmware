@@ -10,6 +10,8 @@
 #if (ENABLE_KODI == 1)
 #include "devices/mediaPlayer/device_kodi/device_kodi.h"
 #endif
+// guis
+#include "guis/gui_t9.h"
 
 uint16_t SCENE_KODI;       //"Scene_kodi"
 uint16_t SCENE_KODI_FORCE; //"Scene_kodi_force"
@@ -69,7 +71,8 @@ scene_start_sequence_kodi(void) {
 void
 scene_end_sequence_kodi(void) {}
 
-std::string scene_name_kodi = "Kodi";
+std::string scene_name_kodi    = "Kodi";
+t_gui_list  scene_kodi_gui_list = {tabName_t9};
 
 void
 register_scene_kodi(void) {
@@ -83,6 +86,6 @@ register_scene_kodi(void) {
                    &key_repeatModes_kodi,
                    &key_commands_short_kodi,
                    &key_commands_long_kodi,
-                   NULL,
+                   &scene_kodi_gui_list,
                    SCENE_KODI);
 }

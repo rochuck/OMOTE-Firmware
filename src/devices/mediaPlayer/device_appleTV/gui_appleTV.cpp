@@ -45,9 +45,8 @@ launcher_event_cb(lv_event_t* e) {
         case CELL_HDHOMERUN:    executeCommand(COMPANION_LAUNCH_HDHOMERUN);    break;
         case CELL_PRIME:        executeCommand(COMPANION_LAUNCH_PRIMEVIDEO);   break;
         case CELL_APPLETV_PLUS: executeCommand(COMPANION_LAUNCH_APPLETV_PLUS); break;
-        // TODO: wire to COMPANION_LAUNCH_CUSTOM with bundle id once known
-        case CELL_IMMICH:                                                      break;
-        case CELL_TSN:                                                         break;
+        case CELL_IMMICH:       executeCommand(COMPANION_LAUNCH_IMMICH);       break;
+        case CELL_TSN:          executeCommand(COMPANION_LAUNCH_TSN);          break;
 #endif
         case CELL_BACK:         executeCommand(APPLETV_MENU);                  break;
         case CELL_MENU:         executeCommand(APPLETV_HOME);                  break;

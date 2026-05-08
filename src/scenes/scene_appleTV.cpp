@@ -11,7 +11,6 @@
 // guis
 #include "devices/mediaPlayer/device_appleTV/gui_appleTV.h"
 #include "guis/gui_numpad.h"
-#include "guis/gui_t9.h"
 #if (ENABLE_COMPANION == 1)
 #include "devices/mediaPlayer/device_appleTV_companion/device_appleTV_companion.h"
 #endif

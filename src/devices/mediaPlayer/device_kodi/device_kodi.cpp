@@ -28,6 +28,7 @@ uint16_t KODI_VOLUME_DOWN;
 uint16_t KODI_MUTE_TOGGLE;
 
 uint16_t KODI_ACTION_CUSTOM;
+uint16_t KODI_SEND_TEXT;
 
 // Helper: build {method, params_json} payload pair.
 // Note: params_json must be a complete JSON object string.
@@ -62,6 +63,9 @@ register_device_kodi(void) {
 
     // Custom: caller supplies the params JSON via additionalPayload to executeCommand()
     register_command(&KODI_ACTION_CUSTOM, makeCommandData(KODI, {"Input.ExecuteAction", "{}"}));
+
+    // Text input: caller supplies {"text":"...","done":bool} via additionalPayload to executeCommand()
+    register_command(&KODI_SEND_TEXT,     makeCommandData(KODI, {"Input.SendText",      "{}"}));
 }
 
 #endif // ENABLE_KODI

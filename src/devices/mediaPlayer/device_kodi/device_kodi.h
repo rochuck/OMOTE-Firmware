@@ -35,6 +35,10 @@ extern uint16_t KODI_MUTE_TOGGLE;
 // e.g. executeCommand(KODI_ACTION_CUSTOM, "{\"action\":\"osd\"}");
 extern uint16_t KODI_ACTION_CUSTOM;
 
+// Text input. Caller supplies params via additionalPayload, e.g.
+// executeCommand(KODI_SEND_TEXT, "{\"text\":\"hello\",\"done\":true}");
+extern uint16_t KODI_SEND_TEXT;
+
 void register_device_kodi(void);
 
 #endif // ENABLE_KODI

@@ -14,6 +14,8 @@ uint16_t COMPANION_LAUNCH_HULU;
 uint16_t COMPANION_LAUNCH_SPOTIFY;
 uint16_t COMPANION_LAUNCH_PLEX;
 uint16_t COMPANION_LAUNCH_HDHOMERUN;
+uint16_t COMPANION_LAUNCH_TSN;
+uint16_t COMPANION_LAUNCH_IMMICH;
 uint16_t COMPANION_LAUNCH_CUSTOM;
 
 void register_device_appleTV_companion(void) {
@@ -27,7 +29,7 @@ void register_device_appleTV_companion(void) {
         makeCommandData(COMPANION, {"launch", "com.disney.disneyplus"}));
 
     register_command(&COMPANION_LAUNCH_APPLETV_PLUS,
-        makeCommandData(COMPANION, {"launch", "com.apple.TVShows"}));
+        makeCommandData(COMPANION, {"launch", "com.apple.TVWatchList"}));
 
     register_command(&COMPANION_LAUNCH_PRIMEVIDEO,
         makeCommandData(COMPANION, {"launch", "com.amazon.aiv.AIVApp"}));
@@ -46,6 +48,12 @@ void register_device_appleTV_companion(void) {
 
     register_command(&COMPANION_LAUNCH_HDHOMERUN,
         makeCommandData(COMPANION, {"launch", "com.silicondust.hdhomerun"}));
+
+    register_command(&COMPANION_LAUNCH_TSN,
+        makeCommandData(COMPANION, {"launch", "ca.tsn.iphoneapp"}));
+
+    register_command(&COMPANION_LAUNCH_IMMICH,
+        makeCommandData(COMPANION, {"launch", "com.sanketh.dev.Immich-Gallery"}));
 
     // Custom: pass bundle ID via additionalPayload
     // e.g.: executeCommand(COMPANION_LAUNCH_CUSTOM, "com.example.myapp")
