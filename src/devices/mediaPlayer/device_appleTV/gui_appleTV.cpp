@@ -16,6 +16,10 @@ LV_IMG_DECLARE(hdhomerunIcon);
 LV_IMG_DECLARE(appleTVBackIcon);
 LV_IMG_DECLARE(appleTVDisplayIcon);
 LV_IMG_DECLARE(youtubeIcon);
+LV_IMG_DECLARE(primeIcon);
+LV_IMG_DECLARE(appletvplusIcon);
+LV_IMG_DECLARE(tsnIcon);
+LV_IMG_DECLARE(immichIcon);
 
 // Launcher cell identifiers
 enum launcherCell {
@@ -94,16 +98,16 @@ create_tab_content_appleTV(lv_obj_t* tab) {
     lv_obj_set_style_grid_row_dsc_array(grid, row_dsc, 0);
 
     // Row 0: YouTube, HDHomeRun
-    add_icon(make_cell(grid, 0, 0, CELL_YOUTUBE),   &youtubeIcon,   56, false);
-    add_icon(make_cell(grid, 1, 0, CELL_HDHOMERUN), &hdhomerunIcon, 56, false);
+    add_icon(make_cell(grid, 0, 0, CELL_YOUTUBE),   &youtubeIcon,   80, false);
+    add_icon(make_cell(grid, 1, 0, CELL_HDHOMERUN), &hdhomerunIcon, 100, false);
 
     // Row 1: Prime Video, Apple TV+
-    add_label(make_cell(grid, 0, 1, CELL_PRIME),        "PRIME");
-    add_label(make_cell(grid, 1, 1, CELL_APPLETV_PLUS), "TV+");
+    add_icon(make_cell(grid, 0, 1, CELL_PRIME),         &primeIcon,       100, false);
+    add_icon(make_cell(grid, 1, 1, CELL_APPLETV_PLUS),  &appletvplusIcon, 100, true);
 
     // Row 2: Immich, TSN
-    add_label(make_cell(grid, 0, 2, CELL_IMMICH), "IMMICH");
-    add_label(make_cell(grid, 1, 2, CELL_TSN),    "TSN");
+    add_icon(make_cell(grid, 0, 2, CELL_IMMICH), &immichIcon, 80,  false);
+    add_icon(make_cell(grid, 1, 2, CELL_TSN),    &tsnIcon,    100, false);
 
     // Row 3: back, menu
     add_icon(make_cell(grid, 0, 3, CELL_BACK), &appleTVBackIcon,    256, true);
