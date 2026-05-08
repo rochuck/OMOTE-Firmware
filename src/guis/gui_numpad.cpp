@@ -7,8 +7,7 @@
 
 #include "applicationInternal/commandHandler.h"
 #include "applicationInternal/scenes/sceneHandler.h"
-#include "scenes/scene_HDHR.h"
-#include "scenes/scene_fireTV.h"
+#include "scenes/scene_appleTV.h"
 #include "devices/TV/device_sharpTV/device_sharpTV.h"
 
 // Virtual Keypad Event handler
@@ -19,16 +18,17 @@ static void virtualKeypad_event_cb(lv_event_t* e) {
   
   int user_data = (intptr_t)(target->user_data);
   // send corrensponding number
-  if (gui_memoryOptimizer_getActiveSceneName() == scene_name_TV) {
+  if (gui_memoryOptimizer_getActiveSceneName() == scene_name_appleTV) {
     uint16_t virtualKeyMapTVNumbers[10] = {SHARP_NUM_1, SHARP_NUM_2, SHARP_NUM_3, SHARP_NUM_4, SHARP_NUM_5, SHARP_NUM_6, SHARP_NUM_7, SHARP_NUM_8, SHARP_NUM_9, SHARP_NUM_0};
     uint16_t command = virtualKeyMapTVNumbers[user_data];
     executeCommand(command);
 
-  } else if (gui_memoryOptimizer_getActiveSceneName() == scene_name_fireTV) {
-    int virtualKeyMapFireTVNumbers[10] = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0x0};
-    int number = virtualKeyMapFireTVNumbers[user_data];
-    std::string numberStr = std::to_string(number);
-    executeCommand(KEYBOARD_SENDSTRING, numberStr);
+  // fireTV scene removed; kept block as reference for future scenes that need T9-style number entry
+  // } else if (gui_memoryOptimizer_getActiveSceneName() == scene_name_fireTV) {
+  //   int virtualKeyMapFireTVNumbers[10] = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0x0};
+  //   int number = virtualKeyMapFireTVNumbers[user_data];
+  //   std::string numberStr = std::to_string(number);
+  //   executeCommand(KEYBOARD_SENDSTRING, numberStr);
   } else {
     omote_log_w("gui_numpad: no known scene is active, don't know what to do with user_data %d\r\n", user_data);
   }

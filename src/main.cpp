@@ -55,7 +55,6 @@
 #include "applicationInternal/gui/guiRegistry.h"
 #include "devices/AVreceiver/device_marantzAmp/gui_marantzAmp.h"
 #include "devices/mediaPlayer/device_appleTV/gui_appleTV.h"
-#include "devices/mediaPlayer/device_hdhomerun/gui_hdhomerun.h"
 #include "devices/misc/device_smarthome/gui_smarthome.h"
 #include "guis/gui_BLEpairing.h"
 #include "guis/gui_irReceiver.h"
@@ -71,12 +70,10 @@
 #include "applicationInternal/keys.h"
 // register scenes
 #include "applicationInternal/scenes/sceneHandler.h"
-#include "scenes/scene_HDHR.h"
 #include "scenes/scene__default.h"
 #include "scenes/scene_allOff.h"
 #include "scenes/scene_appleTV.h"
 #include "scenes/scene_chromecast.h"
-#include "scenes/scene_fireTV.h"
 
 #if defined(ARDUINO)
 /**
@@ -165,7 +162,6 @@ main(int argc, char* argv[]) {
     register_gui_sceneSelection();
     register_gui_irReceiver();
     register_gui_settings();
-    register_gui_appleTV();
     register_gui_numpad();
     register_gui_t9();
 
@@ -175,7 +171,7 @@ main(int argc, char* argv[]) {
     register_gui_smarthome();
     // register_gui_airconditioner();
     register_gui_marantzAmp();
-    register_gui_hdhomerun();
+    register_gui_appleTV();
 // Only show these GUIs in the main gui list. If you don't set this explicitely, by default all registered guis are shown.
 #if (USE_SCENE_SPECIFIC_GUI_LIST != 0)
     main_gui_list = {tabName_marantzAmp,
@@ -192,14 +188,12 @@ main(int argc, char* argv[]) {
 
     // register the scenes and their key_commands_*
     register_scene_defaultKeys();
-    register_scene_TV();
-    register_scene_fireTV();
-    register_scene_chromecast();
     register_scene_appleTV();
+    register_scene_chromecast();
     register_scene_allOff();
     // Only show these scenes on the sceneSelection gui. If you don't set this explicitely, by default all registered scenes are
     // shown.
-    set_scenes_on_sceneSelectionGUI({scene_name_TV, scene_name_fireTV, scene_name_chromecast, scene_name_appleTV});
+    set_scenes_on_sceneSelectionGUI({scene_name_appleTV, scene_name_chromecast});
 
     // init GUI - will initialize tft, touch and lvgl
     init_gui(); // This has to come before any other i2c devices are initialized, otherwise the i2c bus will not be powered
