@@ -8,9 +8,14 @@
 #include <string>
 
 #include "applicationInternal/commandHandler.h"
+#include "applicationInternal/gui/guiMemoryOptimizer.h"
 #include "applicationInternal/scenes/sceneHandler.h"
+#include "scenes/scene_kodi_BT.h"
 #if (ENABLE_KODI == 1)
 #include "devices/mediaPlayer/device_kodi/device_kodi.h"
+#endif
+#if (ENABLE_KEYBOARD_BLE == 1)
+#include "devices/keyboard/device_keyboard_ble/device_keyboard_ble.h"
 #endif
 
 // Multi-tap (classic phone T9) state. After COMMIT_MS of inactivity, or when a
@@ -142,12 +147,23 @@ virtualT9_event_cb(lv_event_t* e) {
         commit_pending();
         const char* text = lv_textarea_get_text(s_ta);
         if (text != nullptr && text[0] != '\0') {
-#if (ENABLE_KODI == 1)
-            std::string payload = std::string("{\"text\":\"") + json_escape(text) + "\",\"done\":true}";
-            executeCommand(KODI_SEND_TEXT, payload);
-#else
-            omote_log_w("gui_t9: OK pressed but ENABLE_KODI is off; nothing to send\r\n");
+            bool sent = false;
+#if (ENABLE_KEYBOARD_BLE == 1)
+            if (gui_memoryOptimizer_getActiveSceneName() == scene_name_kodi_BT) {
+                executeCommand(KEYBOARD_BLE_SENDSTRING, std::string(text));
+                sent = true;
+            }
 #endif
+#if (ENABLE_KODI == 1)
+            if (!sent) {
+                std::string payload = std::string("{\"text\":\"") + json_escape(text) + "\",\"done\":true}";
+                executeCommand(KODI_SEND_TEXT, payload);
+                sent = true;
+            }
+#endif
+            if (!sent) {
+                omote_log_w("gui_t9: OK pressed but no text sink available; nothing to send\r\n");
+            }
         }
         lv_textarea_set_text(s_ta, "");
         return;

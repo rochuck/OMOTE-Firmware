@@ -134,6 +134,8 @@ const uint8_t        BLE_KEY_DOWN_ARROW           = 0xD9;
 const uint8_t        BLE_KEY_RIGHT_ARROW          = 0xD7;
 const uint8_t        BLE_KEY_LEFT_ARROW           = 0xD8;
 const uint8_t        BLE_KEY_RETURN               = 0xB0;
+const uint8_t        BLE_KEY_ESC                  = 0xB1;
+const uint8_t        BLE_KEY_BACKSPACE            = 0xB2;
 const MediaKeyReport BLE_KEY_MEDIA_WWW_BACK       = {0, 32};
 const MediaKeyReport BLE_KEY_MEDIA_WWW_HOME       = {128, 0};
 const MediaKeyReport BLE_KEY_MEDIA_PREVIOUS_TRACK = {2, 0};
@@ -160,6 +162,8 @@ void
 keyboardBLE_printBonds();
 std::string
 keyboardBLE_getBonds();
+std::string
+keyboardBLE_getLocalAddress();
 void
 keyboardBLE_deleteBonds();
 bool

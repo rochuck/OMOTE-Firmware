@@ -31,6 +31,13 @@ extern uint16_t KEYBOARD_BLE_MUTE;
 extern uint16_t KEYBOARD_BLE_VOLUME_INCREMENT;
 extern uint16_t KEYBOARD_BLE_VOLUME_DECREMENT;
 
+// Plain keystrokes (printable ASCII or named keys)
+extern uint16_t KEYBOARD_BLE_KEY_X;
+extern uint16_t KEYBOARD_BLE_KEY_I;
+extern uint16_t KEYBOARD_BLE_KEY_C;
+extern uint16_t KEYBOARD_BLE_KEY_BACKSPACE;
+extern uint16_t KEYBOARD_BLE_KEY_ESC;
+
 // commands with specific address
 extern uint16_t KEYBOARD_BLE_RIGHT_FIRETV;
 extern uint16_t KEYBOARD_BLE_LEFT_NVIDIASHIELD;

@@ -78,6 +78,7 @@
 #include "scenes/scene_appleTV.h"
 #include "scenes/scene_chromecast.h"
 #include "scenes/scene_kodi.h"
+#include "scenes/scene_kodi_BT.h"
 
 #if defined(ARDUINO)
 /**
@@ -198,10 +199,11 @@ main(int argc, char* argv[]) {
     register_scene_appleTV();
     register_scene_chromecast();
     register_scene_kodi();
+    register_scene_kodi_BT();
     register_scene_allOff();
     // Only show these scenes on the sceneSelection gui. If you don't set this explicitely, by default all registered scenes are
     // shown.
-    set_scenes_on_sceneSelectionGUI({scene_name_appleTV, scene_name_kodi, scene_name_chromecast});
+    set_scenes_on_sceneSelectionGUI({scene_name_appleTV, scene_name_kodi, scene_name_kodi_BT, scene_name_chromecast});
 
     // init GUI - will initialize tft, touch and lvgl
     init_gui(); // This has to come before any other i2c devices are initialized, otherwise the i2c bus will not be powered

@@ -11,6 +11,7 @@
 #include "scenes/scene_appleTV.h"
 #include "scenes/scene_chromecast.h"
 #include "scenes/scene_kodi.h"
+#include "scenes/scene_kodi_BT.h"
 
 uint16_t    SCENE_SELECTION;
 std::string scene_name_selection = "sceneSelection";
@@ -55,7 +56,7 @@ void register_scene_defaultKeys(void) {
     {KEY_BACK,  SCENE_SELECTION  },                                                                        /*{KEY_SRC,   COMMAND_UNKNOWN  },*/
     {KEY_VOLUP, MARANTZ_VOL_PLUS  },                      {KEY_MUTE,  MARANTZ_MUTE_TOGGLE},                  /*{KEY_CHUP,  COMMAND_UNKNOWN  },*/
     {KEY_VOLDO, MARANTZ_VOL_MINUS },                      {KEY_REC,   SCENE_BACK_TO_PREVIOUS_GUI_LIST  },   /*{KEY_CHDOW, COMMAND_UNKNOWN  },*/
-    {KEY_RED,   SCENE_APPLETV_FORCE},    {KEY_GREEN, SCENE_KODI_FORCE},    {KEY_YELLO, SCENE_CHROMECAST_FORCE},
+    {KEY_RED,   SCENE_APPLETV_FORCE},    {KEY_GREEN, SCENE_KODI_FORCE},    {KEY_YELLO, SCENE_CHROMECAST_FORCE},    {KEY_BLUE,  SCENE_KODI_BT_FORCE},
   };
 
     // clang-format on

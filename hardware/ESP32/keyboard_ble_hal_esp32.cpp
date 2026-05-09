@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <nvs.h>
 #include <nvs_flash.h>
+#include <esp_mac.h>
 
 #include "lib/ESP32-BLE-Keyboard/BleKeyboard.h"
 #include "battery_hal_esp32.h"
@@ -40,6 +41,17 @@ void keyboardBLE_printBonds_HAL() {
 
 std::string keyboardBLE_getBonds_HAL() {
   return bleKeyboard.getBonds();
+}
+
+std::string keyboardBLE_getLocalAddress_HAL() {
+  uint8_t mac[6] = {0};
+  if (esp_read_mac(mac, ESP_MAC_BT) != ESP_OK) {
+    return "unknown";
+  }
+  char buf[18];
+  snprintf(buf, sizeof(buf), "%02X:%02X:%02X:%02X:%02X:%02X",
+           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  return std::string(buf);
 }
 
 void keyboardBLE_deleteBonds_HAL() {

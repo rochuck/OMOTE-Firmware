@@ -24,6 +24,10 @@ button_clicked_event_cb(lv_event_t* e) {
 #if (ENABLE_COMPANION == 1)
     if (user_data == 7) { executeCommand(COMPANION_LAUNCH_HDHOMERUN); }
 #endif
+    if (user_data == 8) { executeCommand(MARANTZ_INPUT_BD); }
+    if (user_data == 9) { executeCommand(MARANTZ_INPUT_DVD); }
+    if (user_data == 10) { executeCommand(MARANTZ_INPUT_GAME); }
+    if (user_data == 11) { executeCommand(MARANTZ_INPUT_DSS); }
 }
 
 lv_obj_t* ui_Image1;
@@ -128,6 +132,32 @@ create_tab_content_marantzAmp(lv_obj_t* tab) {
     lv_obj_t* label_appletv_off = lv_label_create(button_appletv_off);
     lv_label_set_text(label_appletv_off, "ATV OFF");
     lv_obj_center(label_appletv_off);
+
+    // -- four input-select buttons stacked down the middle (BD / DVD / GAME / DSS) ------------------
+    struct InputBtn {
+        const char* label;
+        int         user_data;
+        int         y;
+    };
+    const InputBtn input_btns[] = {
+        {"BD", 8, 5},
+        {"DVD", 9, 50},
+        {"GAME", 10, 95},
+        {"DSS", 11, 140},
+    };
+    for (const auto& ib : input_btns) {
+        lv_obj_t* btn = lv_btn_create(ui_Image1);
+        lv_obj_add_flag(btn, LV_OBJ_FLAG_FLOATING);
+        lv_obj_set_size(btn, 80, 40);
+        lv_obj_align(btn, LV_ALIGN_TOP_MID, 0, ib.y);
+        lv_obj_set_style_radius(btn, 10, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(btn, color_primary, LV_PART_MAIN);
+        lv_obj_add_event_cb(btn, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) ib.user_data);
+
+        lv_obj_t* lbl = lv_label_create(btn);
+        lv_label_set_text(lbl, ib.label);
+        lv_obj_center(lbl);
+    }
 
 #if (ENABLE_COMPANION == 1)
     // -- create a button for "HDHR" launching HDHomeRun via companion ----------------------------------------

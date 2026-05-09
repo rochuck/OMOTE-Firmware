@@ -5,6 +5,9 @@
 // Only activate the commands that are used. Every command takes 100 bytes, wether used or not.
 extern uint16_t MARANTZ_INPUT_DVD;
 extern uint16_t MARANTZ_INPUT_DTV;
+extern uint16_t MARANTZ_INPUT_BD;
+extern uint16_t MARANTZ_INPUT_GAME;
+extern uint16_t MARANTZ_INPUT_DSS;
 // extern uint16_t MARANTZ_INPUT_VCR;
 // extern uint16_t MARANTZ_POWER_TOGGLE;
 // extern uint16_t MARANTZ_INPUT_CD;

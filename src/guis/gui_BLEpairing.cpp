@@ -236,6 +236,8 @@ void create_tab_content_blepairing(lv_obj_t* tab) {
   lv_obj_add_event_cb(tab, BLEpairing_event_cb, LV_EVENT_CLICKED, NULL);
 
   BLEparingTabIsInMemory = true;
+
+  logTextAdd("My BLE address: " + keyboardBLE_getLocalAddress() + "\n");
 }
 
 void notify_tab_before_delete_blepairing(void) {

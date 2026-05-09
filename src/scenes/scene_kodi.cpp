@@ -63,9 +63,9 @@ scene_start_sequence_kodi(void) {
     delay(10);
     executeCommand(MARANTZ_POWER_ON);
     delay(1000);
-    executeCommand(MARANTZ_INPUT_DVD);
+    executeCommand(MARANTZ_INPUT_GAME);
     delay(10);
-    executeCommand(SHARP_INPUT_HDMI_2);
+    executeCommand(SHARP_INPUT_HDMI_1);
 }
 
 void

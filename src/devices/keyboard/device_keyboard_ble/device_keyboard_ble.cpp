@@ -26,6 +26,12 @@ uint16_t KEYBOARD_BLE_MUTE                ; //"Keyboard_ble_mute";
 uint16_t KEYBOARD_BLE_VOLUME_INCREMENT    ; //"Keyboard_ble_volume_increment";
 uint16_t KEYBOARD_BLE_VOLUME_DECREMENT    ; //"Keyboard_ble_volume_decrement";
 
+uint16_t KEYBOARD_BLE_KEY_X               ; //"Keyboard_ble_key_x";
+uint16_t KEYBOARD_BLE_KEY_I               ; //"Keyboard_ble_key_i";
+uint16_t KEYBOARD_BLE_KEY_C               ; //"Keyboard_ble_key_c";
+uint16_t KEYBOARD_BLE_KEY_BACKSPACE       ; //"Keyboard_ble_key_backspace";
+uint16_t KEYBOARD_BLE_KEY_ESC             ; //"Keyboard_ble_key_esc";
+
 // commands with specific address
 uint16_t KEYBOARD_BLE_RIGHT_FIRETV;
 uint16_t KEYBOARD_BLE_LEFT_NVIDIASHIELD;
@@ -53,6 +59,12 @@ void register_device_keyboard_ble() {
   register_command(&KEYBOARD_BLE_MUTE                , makeCommandData(BLE_KEYBOARD, {}));
   register_command(&KEYBOARD_BLE_VOLUME_INCREMENT    , makeCommandData(BLE_KEYBOARD, {}));
   register_command(&KEYBOARD_BLE_VOLUME_DECREMENT    , makeCommandData(BLE_KEYBOARD, {}));
+
+  register_command(&KEYBOARD_BLE_KEY_X               , makeCommandData(BLE_KEYBOARD, {}));
+  register_command(&KEYBOARD_BLE_KEY_I               , makeCommandData(BLE_KEYBOARD, {}));
+  register_command(&KEYBOARD_BLE_KEY_C               , makeCommandData(BLE_KEYBOARD, {}));
+  register_command(&KEYBOARD_BLE_KEY_BACKSPACE       , makeCommandData(BLE_KEYBOARD, {}));
+  register_command(&KEYBOARD_BLE_KEY_ESC             , makeCommandData(BLE_KEYBOARD, {}));
 
 // commands with specific address
 // In the commandData, both the address and the command to be sent have to be provided.
@@ -182,6 +194,26 @@ void keyboard_ble_executeCommand(uint16_t command, std::list<std::string> comman
   } else if (commandToBeSent == KEYBOARD_BLE_VOLUME_DECREMENT) {
     if (doLog) {omote_log_d("VOLUME_DECREMENT received\r\n");}
     consumerControlBLE_write(BLE_KEY_MEDIA_VOLUME_DOWN);
+
+  } else if (commandToBeSent == KEYBOARD_BLE_KEY_X) {
+    if (doLog) {omote_log_d("KEY_X received\r\n");}
+    keyboardBLE_write('x');
+
+  } else if (commandToBeSent == KEYBOARD_BLE_KEY_I) {
+    if (doLog) {omote_log_d("KEY_I received\r\n");}
+    keyboardBLE_write('i');
+
+  } else if (commandToBeSent == KEYBOARD_BLE_KEY_C) {
+    if (doLog) {omote_log_d("KEY_C received\r\n");}
+    keyboardBLE_write('c');
+
+  } else if (commandToBeSent == KEYBOARD_BLE_KEY_BACKSPACE) {
+    if (doLog) {omote_log_d("KEY_BACKSPACE received\r\n");}
+    keyboardBLE_write(BLE_KEY_BACKSPACE);
+
+  } else if (commandToBeSent == KEYBOARD_BLE_KEY_ESC) {
+    if (doLog) {omote_log_d("KEY_ESC received\r\n");}
+    keyboardBLE_write(BLE_KEY_ESC);
 
   }
 }

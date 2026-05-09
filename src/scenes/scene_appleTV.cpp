@@ -64,7 +64,7 @@ scene_start_sequence_appleTV(void) {
     delay(10);
     executeCommand(APPLETV_POWER_ON);
     delay(1000);
-    executeCommand(MARANTZ_INPUT_DVD);
+    executeCommand(MARANTZ_INPUT_BD);
     delay(10);
     executeCommand(SHARP_INPUT_HDMI_5);
     delay(12000);

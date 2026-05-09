@@ -18,6 +18,7 @@ void keyboardBLE_printBonds_HAL() {
   thisAnnounceBLEmessage_cb("NumBonds: 2\n bond 0: 11:22:33:44:55:66\n bond 1: 77:88:99:aa:bb:cc");
 };
 std::string keyboardBLE_getBonds_HAL() {return "11:22:33:44:55:66,77:88:99:aa:bb:cc";};
+std::string keyboardBLE_getLocalAddress_HAL() {return "AA:BB:CC:DD:EE:FF";};
 void keyboardBLE_deleteBonds_HAL() {};
 bool keyboardBLE_forceConnectionToAddress_HAL(std::string peerAddress) {return true;};
 tAnnounceBLEmessage_cb thisAnnounceBLEmessage_cb = NULL;

@@ -6,6 +6,14 @@
 // Only activate the commands that are used. Every command takes 100 bytes, wether used or not.
 uint16_t MARANTZ_INPUT_DVD; //"Marantz_input_dvd";
 uint16_t MARANTZ_INPUT_DTV; //"Marantz_input_dtv";
+// On the NR1501 the front-panel labels for these codes don't match the rear-panel HDMI
+// labels — bench-tested 2026-05-08:
+//   BD button   -> selects the AppleTV HDMI input  (used by scene_appleTV)
+//   GAME button -> selects the Kodi HDMI input     (used by scene_kodi)
+//   DSS button  -> untested (DVD code did nothing on this unit)
+uint16_t MARANTZ_INPUT_BD;   // Marantz 2015 IR Chart: System 07 / Cmd 63 / Ext 00 (Blu-ray Code1)
+uint16_t MARANTZ_INPUT_GAME; // Marantz 2015 IR Chart: System 16 / Cmd 00 / Ext 62
+uint16_t MARANTZ_INPUT_DSS;  // Marantz 2015 IR Chart: System 06 / Cmd 63 (CBL/SAT)
 // uint16_t MARANTZ_INPUT_VCR           ; //"Marantz_input_vcr";
 // uint16_t MARANTZ_POWER_TOGGLE        ; //"Marantz_power_toggle";
 // uint16_t MARANTZ_INPUT_CD            ; //"Marantz_input_cd";
@@ -36,13 +44,49 @@ uint16_t MARANTZ_MUTE_TOGGLE; //"Marantz_mute_toggle";
 uint16_t MARANTZ_POWER_OFF; //"Marantz_power_off";
 uint16_t MARANTZ_POWER_ON;  //"Marantz_power_on";
 
+/* Chucks note, looking at the back of the amp, from left to right the hdmi inputs are:
+blueray game dvd dss and the out */
+
 void
 register_device_marantzAmp() {
     // tested with Marantz RX-V359, works also with others
 
     // Only activate the commands that are used. Every command takes 100 bytes, whether used or not.
-    register_command(&MARANTZ_INPUT_DVD, makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1837C"}));
+    // Original NEC code 0x5EA1837C did nothing on the NR1501 — swapped for the Pronto code
+    // from the Marantz 2015 IR Chart (System 16 / Cmd 00 / Ext 10) so it can be retested.
+    register_command(&MARANTZ_INPUT_DVD,
+                     makeCommandData(IR,
+                                     {std::to_string(IR_PROTOCOL_GLOBALCACHE),
+                                      "36000,1,1,32,32,64,64,64,32,32,32,32,32,32,161,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,64,"
+                                      "64,64,64,2731,32,32,64,64,64,32,32,32,32,32,32,161,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,"
+                                      "64,64,64,64,1200"}));
     register_command(&MARANTZ_INPUT_DTV, makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA12AD5"}));
+
+    // HDMI inputs from the official Marantz 2015 NR/SR/AV IR Command Chart, converted from
+    // Pronto hex to GlobalCache decimal at 36 kHz (same approach as POWER_ON/OFF below).
+
+    // Blu-ray (BD) Code1 — Pronto: 0000 0071 0000 0024 ... (36 repeat pairs)
+    register_command(&MARANTZ_INPUT_BD,
+                     makeCommandData(IR,
+                                     {std::to_string(IR_PROTOCOL_GLOBALCACHE),
+                                      "36000,1,1,32,32,32,32,64,32,32,64,32,32,32,32,32,161,32,32,32,32,32,32,32,32,32,32,64,32,32,32,"
+                                      "32,32,32,32,32,32,32,2731,32,32,32,32,64,32,32,64,32,32,32,32,32,161,32,32,32,32,32,32,32,32,32,"
+                                      "32,64,32,32,32,32,32,32,32,32,32,32,1200"}));
+
+    // GAME — Pronto: 0000 0071 0000 0011 ... (17 pairs, single frame as documented in chart)
+    register_command(&MARANTZ_INPUT_GAME,
+                     makeCommandData(IR,
+                                     {std::to_string(IR_PROTOCOL_GLOBALCACHE),
+                                      "36000,1,1,31,31,64,64,64,31,31,31,31,31,31,160,31,31,31,31,31,31,31,31,31,31,31,64,31,31,31,31,"
+                                      "31,31,31,31,64,2721"}));
+
+    // DSS / CBL/SAT — Pronto: 0000 0073 0000 0020 ... (32 pairs, three RC5-Ext frames)
+    register_command(&MARANTZ_INPUT_DSS,
+                     makeCommandData(IR,
+                                     {std::to_string(IR_PROTOCOL_GLOBALCACHE),
+                                      "36000,1,1,32,32,32,32,64,32,32,64,32,32,64,64,32,32,32,32,32,32,32,32,32,32,32,3163,32,32,32,32,"
+                                      "64,32,32,64,32,32,64,64,32,32,32,32,32,32,32,32,32,32,32,3163,32,32,32,32,64,32,32,64,32,32,64,"
+                                      "64,32,32,32,1176"}));
     // register_command(&MARANTZ_INPUT_VCR           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1F00F"}));
     // register_command(&MARANTZ_POWER_TOGGLE        , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1F807"}));
     // register_command(&MARANTZ_INPUT_CD            , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1A857"}));
@@ -59,8 +103,8 @@ register_device_marantzAmp() {
     // register_command(&MARANTZ_SLEEP               , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1EA15"}));
     // register_command(&MARANTZ_TEST                , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1A15E"}));
     // register_command(&MARANTZ_STRAIGHT            , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA16A95"}));
-    register_command(&MARANTZ_VOL_MINUS, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x410"}));
-    register_command(&MARANTZ_VOL_PLUS, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x411"}));
+    register_command(&MARANTZ_VOL_MINUS, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x411"}));
+    register_command(&MARANTZ_VOL_PLUS, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x410"}));
     // register_command(&MARANTZ_PROG_MINUS          , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA19A65"}));
     // register_command(&MARANTZ_PROG_PLUS           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA11AE5"}));
     register_command(&MARANTZ_MUTE_TOGGLE, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x40D"}));

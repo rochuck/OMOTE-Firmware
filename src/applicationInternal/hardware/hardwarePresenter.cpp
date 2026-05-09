@@ -254,6 +254,10 @@ std::string
 keyboardBLE_getBonds() {
     return keyboardBLE_getBonds_HAL();
 }
+std::string
+keyboardBLE_getLocalAddress() {
+    return keyboardBLE_getLocalAddress_HAL();
+}
 void
 keyboardBLE_deleteBonds() {
     keyboardBLE_deleteBonds_HAL();
