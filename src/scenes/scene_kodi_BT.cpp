@@ -11,7 +11,7 @@
 #include "devices/keyboard/device_keyboard_ble/device_keyboard_ble.h"
 #endif
 // guis
-#include "guis/gui_t9.h"
+#include "guis/gui_kodi_BT.h"
 
 uint16_t SCENE_KODI_BT;       //"Scene_kodi_BT"
 uint16_t SCENE_KODI_BT_FORCE; //"Scene_kodi_BT_force"
@@ -59,9 +59,14 @@ scene_setKeys_kodi_BT() {
 
 void
 scene_start_sequence_kodi_BT(void) {
-    executeCommand(SHARP_POWER_ON);
-    delay(10);
-    executeCommand(MARANTZ_POWER_ON);
+    for (int i = 0; i < 4; i++) {
+        executeCommand(SHARP_POWER_ON);
+        delay(10);
+    }
+    for (int i = 0; i < 4; i++) {
+        executeCommand(MARANTZ_POWER_ON);
+        delay(10);
+    }
     delay(1000);
     executeCommand(MARANTZ_INPUT_GAME);
     delay(10);
@@ -72,7 +77,7 @@ void
 scene_end_sequence_kodi_BT(void) {}
 
 std::string scene_name_kodi_BT    = "Kodi BT";
-t_gui_list  scene_kodi_BT_gui_list = {tabName_t9};
+t_gui_list  scene_kodi_BT_gui_list = {tabName_kodi_BT};
 
 void
 register_scene_kodi_BT(void) {

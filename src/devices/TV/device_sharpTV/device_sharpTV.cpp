@@ -91,8 +91,9 @@ register_device_sharpTV() {
 
     // Power (toggle only - Sharp has no separate on/off)
     register_command(&SHARP_POWER_ON,
-                     makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x41A2"})); // device=16, fn=104
-    register_command(&SHARP_POWER_OFF, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x41A2"})); // toggle (same code)
+                     makeCommandData(IR,
+                                     {std::to_string(IR_PROTOCOL_SHARP), "0x454a"})); // got these from harmony descrete off and on
+    register_command(&SHARP_POWER_OFF, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x474A"}));
 
     // Navigation
     register_command(&SHARP_UP, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x43AA"}));     // device=16, fn=234

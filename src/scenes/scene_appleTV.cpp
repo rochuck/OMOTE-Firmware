@@ -58,11 +58,18 @@ scene_setKeys_appleTV() {
 
 void
 scene_start_sequence_appleTV(void) {
-    executeCommand(SHARP_POWER_ON);
-    delay(10);
-    executeCommand(MARANTZ_POWER_ON);
-    delay(10);
-    executeCommand(APPLETV_POWER_ON);
+    for (int i = 0; i < 4; i++) {
+        executeCommand(SHARP_POWER_ON);
+        delay(10);
+    }
+    for (int i = 0; i < 4; i++) {
+        executeCommand(MARANTZ_POWER_ON);
+        delay(10);
+    }
+    for (int i = 0; i < 4; i++) {
+        executeCommand(APPLETV_POWER_ON);
+        delay(10);
+    }
     delay(1000);
     executeCommand(MARANTZ_INPUT_BD);
     delay(10);

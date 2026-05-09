@@ -52,11 +52,19 @@ create_tab_content_marantzAmp(lv_obj_t* tab) {
     lv_obj_add_flag(ui_Image1, LV_OBJ_FLAG_ADV_HITTEST);  /// Flags
     lv_obj_clear_flag(ui_Image1, LV_OBJ_FLAG_SCROLLABLE); /// Flags
 
+    auto style_button = [](lv_obj_t* btn) {
+        lv_obj_set_style_radius(btn, 10, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(btn, color_primary, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(btn, LV_OPA_70, LV_PART_MAIN);
+        lv_obj_set_style_border_width(btn, 2, LV_PART_MAIN);
+        lv_obj_set_style_border_color(btn, lv_color_white(), LV_PART_MAIN);
+        lv_obj_set_style_border_opa(btn, LV_OPA_COVER, LV_PART_MAIN);
+    };
+
     // -- create a button for "S. Direct" ----------------------------------------
     lv_obj_t* button = lv_btn_create(ui_Image1);
     lv_obj_set_size(button, 80, 40);
-    lv_obj_set_style_radius(button, 10, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(button, color_primary, LV_PART_MAIN);
+    style_button(button);
     lv_obj_add_event_cb(button, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 0);
 
     lv_obj_t* label = lv_label_create(button);
@@ -66,8 +74,7 @@ create_tab_content_marantzAmp(lv_obj_t* tab) {
     // -- create a button for "OFF" ----------------------------------------
     lv_obj_t* button3 = lv_btn_create(ui_Image1);
     lv_obj_set_size(button3, 80, 40);
-    lv_obj_set_style_radius(button3, 10, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(button3, color_primary, LV_PART_MAIN);
+    style_button(button3);
     lv_obj_add_event_cb(button3, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 2);
 
     lv_obj_t* label3 = lv_label_create(button3);
@@ -77,8 +84,7 @@ create_tab_content_marantzAmp(lv_obj_t* tab) {
     // -- create a button for "ON" ----------------------------------------
     lv_obj_t* button5 = lv_btn_create(ui_Image1);
     lv_obj_set_size(button5, 80, 40);
-    lv_obj_set_style_radius(button5, 10, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(button5, color_primary, LV_PART_MAIN);
+    style_button(button5);
     lv_obj_add_event_cb(button5, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 1);
 
     lv_obj_t* label5 = lv_label_create(button5);
@@ -88,8 +94,7 @@ create_tab_content_marantzAmp(lv_obj_t* tab) {
     // -- create a button for "Sharp ON" ----------------------------------------
     lv_obj_t* button6 = lv_btn_create(ui_Image1);
     lv_obj_set_size(button6, 80, 40);
-    lv_obj_set_style_radius(button6, 10, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(button6, color_primary, LV_PART_MAIN);
+    style_button(button6);
     lv_obj_add_event_cb(button6, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 3);
 
     lv_obj_t* label6 = lv_label_create(button6);
@@ -99,8 +104,7 @@ create_tab_content_marantzAmp(lv_obj_t* tab) {
     // -- create a button for "Sharp OFF" ----------------------------------------
     lv_obj_t* button7 = lv_btn_create(ui_Image1);
     lv_obj_set_size(button7, 80, 40);
-    lv_obj_set_style_radius(button7, 10, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(button7, color_primary, LV_PART_MAIN);
+    style_button(button7);
     lv_obj_add_event_cb(button7, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 4);
 
     lv_obj_t* label7 = lv_label_create(button7);
@@ -112,8 +116,7 @@ create_tab_content_marantzAmp(lv_obj_t* tab) {
     lv_obj_add_flag(button_appletv_on, LV_OBJ_FLAG_FLOATING);
     lv_obj_set_size(button_appletv_on, 80, 40);
     lv_obj_align(button_appletv_on, LV_ALIGN_TOP_RIGHT, -5, 5);
-    lv_obj_set_style_radius(button_appletv_on, 10, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(button_appletv_on, color_primary, LV_PART_MAIN);
+    style_button(button_appletv_on);
     lv_obj_add_event_cb(button_appletv_on, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 5);
 
     lv_obj_t* label_appletv_on = lv_label_create(button_appletv_on);
@@ -125,8 +128,7 @@ create_tab_content_marantzAmp(lv_obj_t* tab) {
     lv_obj_add_flag(button_appletv_off, LV_OBJ_FLAG_FLOATING);
     lv_obj_set_size(button_appletv_off, 80, 40);
     lv_obj_align(button_appletv_off, LV_ALIGN_TOP_RIGHT, -5, 50);
-    lv_obj_set_style_radius(button_appletv_off, 10, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(button_appletv_off, color_primary, LV_PART_MAIN);
+    style_button(button_appletv_off);
     lv_obj_add_event_cb(button_appletv_off, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 6);
 
     lv_obj_t* label_appletv_off = lv_label_create(button_appletv_off);
@@ -150,8 +152,7 @@ create_tab_content_marantzAmp(lv_obj_t* tab) {
         lv_obj_add_flag(btn, LV_OBJ_FLAG_FLOATING);
         lv_obj_set_size(btn, 80, 40);
         lv_obj_align(btn, LV_ALIGN_TOP_MID, 0, ib.y);
-        lv_obj_set_style_radius(btn, 10, LV_PART_MAIN);
-        lv_obj_set_style_bg_color(btn, color_primary, LV_PART_MAIN);
+        style_button(btn);
         lv_obj_add_event_cb(btn, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) ib.user_data);
 
         lv_obj_t* lbl = lv_label_create(btn);
@@ -165,8 +166,7 @@ create_tab_content_marantzAmp(lv_obj_t* tab) {
     lv_obj_add_flag(button_hdhr, LV_OBJ_FLAG_FLOATING);
     lv_obj_set_size(button_hdhr, 80, 40);
     lv_obj_align(button_hdhr, LV_ALIGN_TOP_RIGHT, -5, 95);
-    lv_obj_set_style_radius(button_hdhr, 10, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(button_hdhr, color_primary, LV_PART_MAIN);
+    style_button(button_hdhr);
     lv_obj_add_event_cb(button_hdhr, button_clicked_event_cb, LV_EVENT_CLICKED, (void*) (intptr_t) 7);
 
     lv_obj_t* label_hdhr = lv_label_create(button_hdhr);

@@ -59,9 +59,14 @@ scene_setKeys_kodi() {
 
 void
 scene_start_sequence_kodi(void) {
-    executeCommand(SHARP_POWER_ON);
-    delay(10);
-    executeCommand(MARANTZ_POWER_ON);
+    for (int i = 0; i < 4; i++) {
+        executeCommand(SHARP_POWER_ON);
+        delay(10);
+    }
+    for (int i = 0; i < 4; i++) {
+        executeCommand(MARANTZ_POWER_ON);
+        delay(10);
+    }
     delay(1000);
     executeCommand(MARANTZ_INPUT_GAME);
     delay(10);
