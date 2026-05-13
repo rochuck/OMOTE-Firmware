@@ -20,6 +20,7 @@
 #include "applicationInternal/hardware/hardwarePresenter.h"
 // register devices and their commands
 //   special
+#include "applicationInternal/blasterClient.h"
 #include "applicationInternal/commandHandler.h"
 #include "devices/misc/device_specialCommands.h"
 //   keyboards
@@ -47,6 +48,9 @@
 #if (ENABLE_KODI == 1)
 #include "devices/mediaPlayer/device_kodi/device_kodi.h"
 #endif
+#if (ENABLE_LYRION == 1)
+#include "devices/mediaPlayer/device_lyrion/device_lyrion.h"
+#endif
 // #include "devices/mediaPlayer/device_lgbluray/device_lgbluray.h"
 // #include "devices/mediaPlayer/device_samsungbluray/device_samsungbluray.h"
 // #include "devices/mediaPlayer/device_shield/device_shield.h"
@@ -62,6 +66,9 @@
 #include "guis/gui_BLEpairing.h"
 #include "guis/gui_irReceiver.h"
 #include "guis/gui_kodi_BT.h"
+#if (ENABLE_LYRION == 1)
+#include "guis/gui_lyrion_nowplaying.h"
+#endif
 #include "guis/gui_numpad.h"
 #include "guis/gui_sceneSelection.h"
 #include "guis/gui_settings.h"
@@ -80,6 +87,7 @@
 #include "scenes/scene_chromecast.h"
 #include "scenes/scene_kodi.h"
 #include "scenes/scene_kodi_BT.h"
+#include "scenes/scene_lyrion.h"
 
 #if defined(ARDUINO)
 /**
@@ -152,6 +160,9 @@ main(int argc, char* argv[]) {
 #if (ENABLE_KODI == 1)
     register_device_kodi();
 #endif
+#if (ENABLE_LYRION == 1)
+    register_device_lyrion();
+#endif
     // register_device_lgbluray();
     // register_device_samsungbluray();
     // register_device_shield();
@@ -174,6 +185,9 @@ main(int argc, char* argv[]) {
     register_gui_numpad();
     register_gui_t9();
     register_gui_kodi_BT();
+#if (ENABLE_LYRION == 1)
+    register_gui_lyrion_nowplaying();
+#endif
 
 #if (ENABLE_KEYBOARD_BLE == 1)
     register_gui_blepairing();
@@ -202,10 +216,11 @@ main(int argc, char* argv[]) {
     register_scene_chromecast();
     register_scene_kodi();
     register_scene_kodi_BT();
+    register_scene_lyrion();
     register_scene_allOff();
     // Only show these scenes on the sceneSelection gui. If you don't set this explicitely, by default all registered scenes are
     // shown.
-    set_scenes_on_sceneSelectionGUI({scene_name_appleTV, scene_name_kodi, scene_name_kodi_BT, scene_name_chromecast});
+    set_scenes_on_sceneSelectionGUI({scene_name_appleTV, scene_name_kodi, scene_name_kodi_BT, scene_name_lyrion});
 
     // init GUI - will initialize tft, touch and lvgl
     init_gui(); // This has to come before any other i2c devices are initialized, otherwise the i2c bus will not be powered
@@ -230,6 +245,10 @@ main(int argc, char* argv[]) {
 // this call will also init websockets to home assistant
 #if (ENABLE_WIFI_AND_MQTT == 1)
     init_mqtt();
+    // Discover the OMOTE-Blaster (cached IP first, mDNS fallback) and
+    // mark it available if the handshake succeeds. Safe to call before
+    // WiFi has fully associated — blaster_init() handles that case.
+    blaster_init();
 #endif
 
 #if (ENABLE_COMPANION == 1)
@@ -239,6 +258,10 @@ main(int argc, char* argv[]) {
 
 #if (ENABLE_KODI == 1)
     init_kodi_HAL();
+#endif
+
+#if (ENABLE_LYRION == 1)
+    init_lyrion_HAL();
 #endif
 
 #if (ENABLE_OTA == 1)
@@ -303,6 +326,7 @@ loop(unsigned long* pIMUTaskTimer, unsigned long* pUpdateStatusTimer) {
 // call mqtt loop to receive mqtt messages, if you are subscribed to some topics
 #if (ENABLE_WIFI_AND_MQTT == 1)
     mqtt_loop();
+    blaster_loop();   // periodic re-discovery when blaster is unreachable
 #endif
 #if (ENABLE_OTA == 1)
     ota_loop();

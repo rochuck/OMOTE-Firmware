@@ -1,4 +1,5 @@
 #include "applicationInternal/commandHandler.h"
+#include "applicationInternal/blasterClient.h"
 #include "applicationInternal/hardware/hardwarePresenter.h"
 #include "applicationInternal/omote_log.h"
 #include "applicationInternal/scenes/sceneHandler.h"
@@ -197,7 +198,14 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
                     protocol.c_str(),
                     convertStringListToString(commandData.commandPayloads).c_str());
 
-        sendIRcode(std::stoi(protocol), commandData.commandPayloads, additionalPayload);
+        int proto = std::stoi(protocol);
+#if (ENABLE_WIFI_AND_MQTT == 1)
+        if (blaster_isEnabled() && blaster_isAvailable() &&
+            blaster_send(proto, commandData.commandPayloads, additionalPayload)) {
+            break;  // forwarded to OMOTE-Blaster — done
+        }
+#endif
+        sendIRcode(proto, commandData.commandPayloads, additionalPayload);
         break;
     }
 
@@ -316,6 +324,27 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
         omote_log_d("execute: kodi method '%s' params '%s'\r\n", method.c_str(), params.c_str());
         bool ok = kodi_sendRpc_HAL(method, params);
         if (!ok) { omote_log_e("kodi: RPC '%s' failed\r\n", method.c_str()); }
+        break;
+    }
+#endif
+
+#if (ENABLE_LYRION == 1)
+    case LYRION: {
+        // Payload format: a single JSON array string (the LMS command array, e.g. "[\"pause\"]")
+        // — OR — an internal sentinel ("__lyrion_player_next__", etc.) that maps to a dedicated
+        // HAL call instead of a JSON-RPC POST.
+        std::string payload = commandData.commandPayloads.empty() ? "" : commandData.commandPayloads.front();
+        omote_log_d("execute: lyrion '%s'\r\n", payload.c_str());
+        if (payload == "__lyrion_player_next__") {
+            lyrion_cyclePlayer_HAL(+1);
+        } else if (payload == "__lyrion_player_prev__") {
+            lyrion_cyclePlayer_HAL(-1);
+        } else if (payload == "__lyrion_power_toggle__") {
+            lyrion_powerToggle_HAL();
+        } else {
+            bool ok = lyrion_sendCommand_HAL(payload);
+            if (!ok) { omote_log_e("lyrion: command '%s' failed\r\n", payload.c_str()); }
+        }
         break;
     }
 #endif

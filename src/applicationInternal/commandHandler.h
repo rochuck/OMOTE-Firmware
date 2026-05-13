@@ -113,6 +113,9 @@ enum commandHandlers {
 #if (ENABLE_KODI == 1)
     KODI,
 #endif
+#if (ENABLE_LYRION == 1)
+    LYRION,
+#endif
 };
 
 struct commandData {

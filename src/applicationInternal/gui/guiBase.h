@@ -43,3 +43,5 @@ void setActiveTab(uint32_t index, lv_anim_enable_t anim_en, bool send_tab_change
 void showMemoryUsageBar(bool showBar);
 // used by commandHandler to show WiFi status
 void showWiFiConnected(bool connected);
+// used by blasterClient to show whether the OMOTE-Blaster is reachable
+void showBlasterAvailable(bool available);

@@ -9,10 +9,13 @@
 #include "applicationInternal/omote_log.h"
 #include "scenes/scene__default.h"
 
+LV_IMG_DECLARE(blasterIcon);
+
 lv_color_t color_primary = lv_color_hex(0x303030); // gray
 lv_obj_t* MemoryUsageLabel = NULL;
 lv_obj_t* WifiLabel = NULL;
 lv_obj_t* BluetoothLabel = NULL;
+lv_obj_t* BlasterIcon = NULL;
 lv_obj_t* BattPercentageLabel = NULL;
 lv_obj_t* BattIconLabel = NULL;
 lv_obj_t* SceneLabel = NULL;
@@ -33,7 +36,10 @@ lv_style_t style_red_border;
 std::mutex mutex_guiBase;
 bool newWifiLabelStatusAvailable = false;
 bool newWiFiLabelStatus;
+bool newBlasterStatusAvailable = false;
+bool newBlasterStatus = false;
 void flushWiFiConnectedStatus();
+void flushBlasterStatus();
 
 void guis_doTabCreationOnStartup();
 void guis_doTabCreationAfterSliding(int newTabID);
@@ -268,6 +274,13 @@ void init_gui_status_bar() {
   lv_label_set_text(BluetoothLabel, "");
   lv_obj_align(BluetoothLabel, LV_ALIGN_TOP_LEFT, 20, labelsPositionTopStatusbar);
   lv_obj_set_style_text_font(BluetoothLabel, &lv_font_montserrat_12, LV_PART_MAIN);
+  // Blaster (16x16 alpha icon, recolored to white to match the labels) ----------
+  BlasterIcon = lv_img_create(statusbar);
+  lv_img_set_src(BlasterIcon, &blasterIcon);
+  lv_obj_align(BlasterIcon, LV_ALIGN_TOP_LEFT, 40, labelsPositionTopStatusbar - 2);
+  lv_obj_set_style_img_recolor(BlasterIcon, lv_color_white(), LV_PART_MAIN);
+  lv_obj_set_style_img_recolor_opa(BlasterIcon, LV_OPA_COVER, LV_PART_MAIN);
+  lv_obj_add_flag(BlasterIcon, LV_OBJ_FLAG_HIDDEN);  // shown by showBlasterAvailable()
   // Scene ------------------------------------------------------------------------
   SceneLabel = lv_label_create(statusbar);
   lv_label_set_text(SceneLabel, "");
@@ -313,6 +326,7 @@ void gui_loop(void) {
   // has to be done in a thread safe way in the main thread
   #if (ENABLE_WIFI_AND_MQTT ==1)
   flushWiFiConnectedStatus();
+  flushBlasterStatus();
   #endif
   #if (ENABLE_KEYBOARD_BLE == 1)
   flushBLEMessages();
@@ -399,4 +413,26 @@ void showWiFiConnected(bool connected) {
   std::lock_guard<std::mutex> lck(mutex_guiBase);
   newWifiLabelStatusAvailable = true;
   newWiFiLabelStatus = connected;
+}
+
+void flushBlasterStatus() {
+  // mirror of flushWiFiConnectedStatus — applies pending blaster status from main thread
+  std::lock_guard<std::mutex> lck(mutex_guiBase);
+  if (newBlasterStatusAvailable) {
+    if (BlasterIcon != NULL) {
+      if (newBlasterStatus) {
+        lv_obj_clear_flag(BlasterIcon, LV_OBJ_FLAG_HIDDEN);
+      } else {
+        lv_obj_add_flag(BlasterIcon, LV_OBJ_FLAG_HIDDEN);
+      }
+    }
+    newBlasterStatusAvailable = false;
+  }
+}
+
+void showBlasterAvailable(bool available) {
+  // called from blasterClient.cpp (any thread); thread-safe via the mutex
+  std::lock_guard<std::mutex> lck(mutex_guiBase);
+  newBlasterStatusAvailable = true;
+  newBlasterStatus = available;
 }

@@ -26,6 +26,16 @@
 #define KODI_USER ""              // override in secrets_override.h (blank = no auth)
 #define KODI_PASS ""              // override in secrets_override.h
 
+// --- Lyrion Music Server (LMS, formerly Logitech Media Server) ---------
+// Default web port is 9000. Auth is rarely enabled on LMS; if you have it,
+// extend the HAL to send Basic auth (mirrors the Kodi HAL pattern).
+// LYRION_PLAYER_NAME: optional. If non-empty, the scene starts with the player
+// whose name matches; otherwise the first discovered player wins. Either way
+// CHUP/CHDOW cycle through all discovered players at runtime.
+#define LYRION_HOST "192.168.1.50" // override in secrets_override.h
+#define LYRION_PORT 9000           // override in secrets_override.h
+#define LYRION_PLAYER_NAME ""       // override in secrets_override.h (blank = use first discovered)
+
 // --- Apple TV Companion Protocol ----------------------------------------
 // To get credentials, on a Mac with pyatv installed:
 //   atvremote --id <ATV_ID> --protocol companion pair

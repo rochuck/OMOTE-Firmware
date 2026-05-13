@@ -261,3 +261,28 @@ init_kodi_HAL(void);
 bool
 kodi_sendRpc_HAL(const std::string& method, const std::string& params_json);
 #endif
+
+// --- Lyrion Music Server ----------------------------------------------------
+#if (ENABLE_LYRION == 1)
+#include <lvgl.h>
+#include <string>
+struct LyrionStatus {
+    std::string player_name;
+    std::string title;
+    std::string artist;
+    std::string album;
+    std::string track_id;
+    float       elapsed_s  = 0.0f; // current play position, seconds
+    float       duration_s = 0.0f; // total track length, seconds (0 = unknown, e.g. stream)
+    bool        is_playing = false;
+    bool        valid      = false;
+};
+void                init_lyrion_HAL(void);
+bool                lyrion_discoverPlayers_HAL(void);
+bool                lyrion_cyclePlayer_HAL(int direction);
+bool                lyrion_sendCommand_HAL(const std::string& command_array_json);
+bool                lyrion_powerToggle_HAL(void);
+bool                lyrion_pollStatus_HAL(LyrionStatus* out);
+const lv_img_dsc_t* lyrion_fetchArt_HAL(const std::string& track_id);
+void                lyrion_releaseArt_HAL(void);
+#endif
