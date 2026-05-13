@@ -26,6 +26,7 @@ static lv_timer_t* s_poll_timer = nullptr;
 
 static std::string s_displayed_track_id;
 static std::string s_displayed_player;
+static int         s_displayed_volume = -2; // -2 forces first paint
 
 static void
 format_mmss(int total_seconds, char* out, size_t out_len, bool negative) {
@@ -67,10 +68,17 @@ poll_cb(lv_timer_t* /*t*/) {
 
     // player_name is filled even when the HTTP call fails (HAL caches the
     // selected player). Always reflect the current selection so CHUP/CHDOW
-    // gives immediate UI feedback.
-    if (st.player_name != s_displayed_player) {
+    // gives immediate UI feedback. Volume rides along on the same label.
+    int vol = (ok && st.valid) ? st.volume : -1;
+    if (st.player_name != s_displayed_player || vol != s_displayed_volume) {
         s_displayed_player = st.player_name;
-        lv_label_set_text(s_player_label, st.player_name.empty() ? "—" : st.player_name.c_str());
+        s_displayed_volume = vol;
+        const char* name = st.player_name.empty() ? "—" : st.player_name.c_str();
+        if (vol >= 0) {
+            lv_label_set_text_fmt(s_player_label, "%s - " LV_SYMBOL_VOLUME_MID " %d%%", name, vol);
+        } else {
+            lv_label_set_text(s_player_label, name);
+        }
     }
 
     if (!ok || !st.valid) {
@@ -87,7 +95,14 @@ poll_cb(lv_timer_t* /*t*/) {
     lv_label_set_text(s_title_label,  st.title.empty()  ? "—" : st.title.c_str());
     lv_label_set_text(s_artist_label, st.artist.c_str());
     lv_label_set_text(s_album_label,  st.album.c_str());
-    update_art_for_track(st.track_id);
+    // Compose an art cache key from coverid + title + artist. coverid alone is
+    // stable across tracks within an album (correct: same art) but is *also*
+    // often stable across songs in a stream where art does change — so we
+    // include title/artist to force a refetch on every track change. The HAL
+    // hits /music/current/cover.png which always returns the now-playing art,
+    // so refetching is the right behavior; the wasted bandwidth within an
+    // album is a few KB and acceptable.
+    update_art_for_track(st.track_id + "|" + st.title + "|" + st.artist);
 
     // Progress bar + time labels. If duration is unknown (stream/radio), show
     // elapsed only and leave the bar empty.
@@ -148,7 +163,7 @@ create_tab_content_lyrion_nowplaying(lv_obj_t* tab) {
     int row_y = 32 + art_px + 10;
     s_title_label = lv_label_create(tab);
     lv_obj_set_width(s_title_label, 220);
-    lv_label_set_long_mode(s_title_label, LV_LABEL_LONG_DOT);
+    lv_label_set_long_mode(s_title_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_text(s_title_label, "—");
     lv_obj_set_style_text_align(s_title_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(s_title_label, &lv_font_montserrat_16, LV_PART_MAIN);
@@ -156,7 +171,7 @@ create_tab_content_lyrion_nowplaying(lv_obj_t* tab) {
 
     s_artist_label = lv_label_create(tab);
     lv_obj_set_width(s_artist_label, 220);
-    lv_label_set_long_mode(s_artist_label, LV_LABEL_LONG_DOT);
+    lv_label_set_long_mode(s_artist_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_text(s_artist_label, "");
     lv_obj_set_style_text_align(s_artist_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(s_artist_label, &lv_font_montserrat_12, LV_PART_MAIN);
@@ -164,7 +179,7 @@ create_tab_content_lyrion_nowplaying(lv_obj_t* tab) {
 
     s_album_label = lv_label_create(tab);
     lv_obj_set_width(s_album_label, 220);
-    lv_label_set_long_mode(s_album_label, LV_LABEL_LONG_DOT);
+    lv_label_set_long_mode(s_album_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_text(s_album_label, "");
     lv_obj_set_style_text_align(s_album_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(s_album_label, &lv_font_montserrat_12, LV_PART_MAIN);
@@ -197,6 +212,7 @@ create_tab_content_lyrion_nowplaying(lv_obj_t* tab) {
     // newly-attached player shows up without rebooting.
     s_displayed_track_id.clear();
     s_displayed_player.clear();
+    s_displayed_volume = -2;
     lyrion_discoverPlayers_HAL();
     poll_cb(nullptr);
 
@@ -224,6 +240,7 @@ notify_tab_before_delete_lyrion_nowplaying(void) {
     s_time_remain  = nullptr;
     s_displayed_track_id.clear();
     s_displayed_player.clear();
+    s_displayed_volume = -2;
     lyrion_releaseArt_HAL();
 }
 

@@ -57,7 +57,11 @@ scene_start_sequence_lyrion(void) {
 }
 
 void
-scene_end_sequence_lyrion(void) {}
+scene_end_sequence_lyrion(void) {
+#if (ENABLE_LYRION == 1)
+    lyrion_powerOffAll_HAL();
+#endif
+}
 
 std::string scene_name_lyrion = "Lyrion";
 // Single-tab gui_list today. To add a library-browse tab later, register a new

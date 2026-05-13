@@ -276,6 +276,7 @@ struct LyrionStatus {
     std::string track_id;
     float       elapsed_s  = 0.0f; // current play position, seconds
     float       duration_s = 0.0f; // total track length, seconds (0 = unknown, e.g. stream)
+    int         volume     = -1;   // 0-100, negative = unknown
     bool        is_playing = false;
     bool        valid      = false;
 };
@@ -284,6 +285,7 @@ bool                lyrion_discoverPlayers_HAL(void);
 bool                lyrion_cyclePlayer_HAL(int direction);
 bool                lyrion_sendCommand_HAL(const std::string& command_array_json);
 bool                lyrion_powerToggle_HAL(void);
+bool                lyrion_powerOffAll_HAL(void);
 bool                lyrion_pollStatus_HAL(LyrionStatus* out);
 const lv_img_dsc_t* lyrion_fetchArt_HAL(const std::string& track_id);
 void                lyrion_releaseArt_HAL(void);

@@ -19,6 +19,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
+#include <Preferences.h>
 #include <WiFi.h>
 #include <esp32-hal-psram.h>
 #include <vector>
@@ -48,6 +49,26 @@ static uint8_t*      s_art_buf       = nullptr;
 static size_t        s_art_len       = 0;
 static std::string   s_art_track_id; // track id whose art is currently in the buffer
 static lv_img_dsc_t  s_art_dsc;      // points into s_art_buf
+
+static const char* LYRION_NVS_NAMESPACE = "lyrion";
+static const char* LYRION_NVS_KEY_PLAYER = "player";
+
+static std::string
+load_saved_player_name(void) {
+    Preferences p;
+    if (!p.begin(LYRION_NVS_NAMESPACE, true)) return std::string();
+    String s = p.getString(LYRION_NVS_KEY_PLAYER, "");
+    p.end();
+    return std::string(s.c_str());
+}
+
+static void
+save_player_name(const std::string& name) {
+    Preferences p;
+    if (!p.begin(LYRION_NVS_NAMESPACE, false)) return;
+    p.putString(LYRION_NVS_KEY_PLAYER, name.c_str());
+    p.end();
+}
 
 static String
 build_url(const char* path) {
@@ -167,14 +188,31 @@ lyrion_discoverPlayers_HAL(void) {
         omote_log_i("lyrion:   [%u] %s  (%s)\r\n", (unsigned) i, s_players[i].name.c_str(), s_players[i].id.c_str());
     }
 
-    // Try to match LYRION_PLAYER_NAME if non-empty
+    // Pick the player to use. Priority:
+    //   1. Last-used player saved in NVS (so manual CHUP/CHDOW selections stick
+    //      across restarts).
+    //   2. LYRION_PLAYER_NAME from secrets (build-time default).
+    //   3. First discovered player.
     s_current_index = 0;
-    const char* preferred = LYRION_PLAYER_NAME;
-    if (preferred && preferred[0] != '\0') {
+    bool matched = false;
+    std::string saved = load_saved_player_name();
+    if (!saved.empty()) {
         for (size_t i = 0; i < s_players.size(); ++i) {
-            if (s_players[i].name == preferred) {
+            if (s_players[i].name == saved) {
                 s_current_index = (int) i;
+                matched = true;
                 break;
+            }
+        }
+    }
+    if (!matched) {
+        const char* preferred = LYRION_PLAYER_NAME;
+        if (preferred && preferred[0] != '\0') {
+            for (size_t i = 0; i < s_players.size(); ++i) {
+                if (s_players[i].name == preferred) {
+                    s_current_index = (int) i;
+                    break;
+                }
             }
         }
     }
@@ -188,6 +226,7 @@ lyrion_cyclePlayer_HAL(int direction) {
     int n = (int) s_players.size();
     s_current_index = ((s_current_index + direction) % n + n) % n;
     omote_log_i("lyrion: cycled to player [%d] %s\r\n", s_current_index, s_players[s_current_index].name.c_str());
+    save_player_name(s_players[s_current_index].name);
     // Invalidate cached art so the GUI refetches for the new player's current track
     lyrion_releaseArt_HAL();
     return true;
@@ -209,6 +248,18 @@ lyrion_sendCommand_HAL(const std::string& command_array_json) {
 bool
 lyrion_powerToggle_HAL(void) {
     return lyrion_sendCommand_HAL("[\"power\"]");
+}
+
+bool
+lyrion_powerOffAll_HAL(void) {
+    if (!s_inited || s_players.empty()) return false;
+    bool ok = true;
+    for (const auto& p : s_players) {
+        String pid  = quote_json_string(p.id);
+        String body = build_rpc_body(pid, F("[\"power\",\"0\"]"));
+        if (post_rpc(body).isEmpty()) ok = false;
+    }
+    return ok;
 }
 
 bool
@@ -246,6 +297,16 @@ lyrion_pollStatus_HAL(LyrionStatus* out) {
     // sometimes top-level. Try playlist_loop first, then fall back.
     out->elapsed_s  = result["time"].as<float>();
     out->duration_s = result["duration"].as<float>(); // may be overwritten below
+
+    // "mixer volume" is 0-100 (or negative when muted in some LMS versions —
+    // treat the magnitude as the level). Falls back to -1 when absent.
+    JsonVariantConst vol = result["mixer volume"];
+    if (!vol.isNull()) {
+        int v = vol.as<int>();
+        if (v < 0) v = -v;
+        if (v > 100) v = 100;
+        out->volume = v;
+    }
 
     JsonArrayConst pl = result["playlist_loop"].as<JsonArrayConst>();
     if (!pl.isNull() && pl.size() > 0) {
@@ -376,6 +437,9 @@ lyrion_fetchArt_HAL(const std::string& track_id) {
     // (lv_png.c) reads dimensions from the PNG IHDR and decodes to the system's
     // native TRUE_COLOR_ALPHA format on open(). Setting cf to RAW_ALPHA here is
     // wrong — the widget would treat the decoded data as raw and render "No data".
+    // The cache key is the descriptor pointer, which is stable across swaps, so
+    // we must explicitly invalidate or LVGL serves the previously-decoded image.
+    lv_img_cache_invalidate_src(&s_art_dsc);
     memset(&s_art_dsc, 0, sizeof(s_art_dsc));
     s_art_dsc.data_size = s_art_len;
     s_art_dsc.data      = s_art_buf;
@@ -388,6 +452,7 @@ lyrion_fetchArt_HAL(const std::string& track_id) {
 void
 lyrion_releaseArt_HAL(void) {
     if (s_art_buf) {
+        lv_img_cache_invalidate_src(&s_art_dsc);
         free(s_art_buf);
         s_art_buf = nullptr;
         s_art_len = 0;
