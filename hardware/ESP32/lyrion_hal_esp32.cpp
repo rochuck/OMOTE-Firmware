@@ -66,6 +66,25 @@ build_rpc_body(const String& player_id_json, const String& command_array_json) {
     return body;
 }
 
+// Replace UTF-8 em-dash (E2 80 94) with ASCII '-'. The LVGL font in use here
+// doesn't include the em-dash glyph, so titles like "Artist — Track" render
+// with a missing-glyph box. Cheap byte-scan in place.
+static std::string
+strip_emdash(const char* s) {
+    std::string out;
+    if (!s) return out;
+    out.reserve(strlen(s));
+    for (const unsigned char* p = (const unsigned char*) s; *p; ) {
+        if (p[0] == 0xE2 && p[1] == 0x80 && p[2] == 0x94) {
+            out += '-';
+            p += 3;
+        } else {
+            out += (char) *p++;
+        }
+    }
+    return out;
+}
+
 static String
 quote_json_string(const std::string& s) {
     // No escaping needed for player MACs / known callers, but keep it tidy.
@@ -232,9 +251,9 @@ lyrion_pollStatus_HAL(LyrionStatus* out) {
     if (!pl.isNull() && pl.size() > 0) {
         JsonVariantConst t = pl[0];
         const char*      s;
-        if ((s = t["title"].as<const char*>()))  out->title  = s;
-        if ((s = t["artist"].as<const char*>())) out->artist = s;
-        if ((s = t["album"].as<const char*>()))  out->album  = s;
+        if ((s = t["title"].as<const char*>()))  out->title  = strip_emdash(s);
+        if ((s = t["artist"].as<const char*>())) out->artist = strip_emdash(s);
+        if ((s = t["album"].as<const char*>()))  out->album  = strip_emdash(s);
         float track_dur = t["duration"].as<float>();
         if (track_dur > 0.5f) out->duration_s = track_dur;
 

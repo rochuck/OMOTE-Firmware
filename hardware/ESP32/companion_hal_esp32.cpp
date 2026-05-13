@@ -107,6 +107,7 @@ static WiFiClient           g_client;
 static QueueHandle_t        g_cmd_queue = nullptr;
 static volatile bool        g_connected = false;
 static volatile bool        g_running   = false;
+static TaskHandle_t         g_task      = nullptr;
 
 // ---------------------------------------------------------------------------
 // Section 1: Hex / utility helpers
@@ -1562,8 +1563,19 @@ void init_companion_HAL(void) {
 
     g_running = true;
     xTaskCreatePinnedToCore(companion_task, "companion", TASK_STACK_SIZE,
-                            nullptr, 1, nullptr, 0 /* core 0 */);
+                            nullptr, 1, &g_task, 0 /* core 0 */);
     omote_log_i("%s: initialized\r\n", TAG);
+}
+
+void companion_shutdown_HAL(void) {
+    g_running = false;
+    if (g_task) {
+        vTaskDelete(g_task);
+        g_task = nullptr;
+    }
+    g_connected = false;
+    g_client.stop();
+    omote_log_i("%s: shut down\r\n", TAG);
 }
 
 bool companion_launchApp_HAL(const std::string& bundleID) {

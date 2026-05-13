@@ -119,7 +119,7 @@ create_tab_content_lyrion_nowplaying(lv_obj_t* tab) {
     s_player_label = lv_label_create(tab);
     lv_label_set_text(s_player_label, "—");
     lv_obj_set_style_text_font(s_player_label, &lv_font_montserrat_16, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_player_label, color_primary, LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_player_label, lv_color_hex(0xFFD700), LV_PART_MAIN);
     lv_obj_align(s_player_label, LV_ALIGN_TOP_MID, 0, 6);
 
     // Album art panel (fallback bg always visible; img on top hides bg when set)

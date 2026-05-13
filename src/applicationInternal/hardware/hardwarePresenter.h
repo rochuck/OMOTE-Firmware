@@ -251,6 +251,8 @@ bool
 companion_launchApp_HAL(const std::string& bundleID);
 bool
 companion_isConnected_HAL(void);
+void
+companion_shutdown_HAL(void);
 #endif
 
 // --- Kodi JSON-RPC ----------------------------------------------------------

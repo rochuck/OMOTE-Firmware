@@ -13,8 +13,9 @@ static tOtaProgressCallback s_progress_cb = NULL;
 void set_ota_start_cb_HAL(tOtaStartCallback cb)    { s_start_cb    = cb; }
 void set_ota_progress_cb_HAL(tOtaProgressCallback cb) { s_progress_cb = cb; }
 
-static size_t ota_total   = 0;
-static size_t ota_written = 0;
+static size_t ota_total    = 0;
+static size_t ota_written  = 0;
+static int    ota_last_pct = -1;
 
 static void handleUpdatePost() {
     otaServer.sendHeader("Connection", "close");
@@ -33,8 +34,9 @@ static void handleUpdateUpload() {
     HTTPUpload& upload = otaServer.upload();
 
     if (upload.status == UPLOAD_FILE_START) {
-        ota_written = 0;
-        ota_total   = otaServer.header("Content-Length").toInt();
+        ota_written  = 0;
+        ota_last_pct = -1;
+        ota_total    = otaServer.header("Content-Length").toInt();
         Serial.printf("OTA: receiving, expected %u bytes\n", ota_total);
         if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
             Update.printError(Serial);
@@ -46,10 +48,16 @@ static void handleUpdateUpload() {
             Update.printError(Serial);
         }
         ota_written += upload.currentSize;
+        // Only fire the progress callback when the integer percent advances.
+        // The callback redraws LVGL, which stalls TCP — once per percent is
+        // smooth enough and keeps the upload from crawling.
         if (s_progress_cb && ota_total > 0) {
             int pct = (int)((ota_written * 100) / ota_total);
             if (pct > 99) { pct = 99; } // reserve 100% for after Update.end()
-            s_progress_cb(pct);
+            if (pct != ota_last_pct) {
+                ota_last_pct = pct;
+                s_progress_cb(pct);
+            }
         }
 
     } else if (upload.status == UPLOAD_FILE_END) {

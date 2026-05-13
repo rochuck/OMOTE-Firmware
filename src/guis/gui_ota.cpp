@@ -13,6 +13,17 @@ static lv_obj_t* ota_status  = NULL;
 void ota_gui_start(void) {
     if (ota_overlay != NULL) { return; }
 
+    // Shut down background tasks that compete with the upload for WiFi /
+    // BLE radio / core 0 cycles. The device reboots at the end of OTA, so
+    // there is no resume path — a hard kill is fine.
+#if (ENABLE_COMPANION == 1)
+    companion_shutdown_HAL();
+#endif
+#if (ENABLE_KEYBOARD_BLE == 1)
+    keyboardBLE_disconnectAllClients();
+    keyboardBLE_stopAdvertising();
+#endif
+
     ota_overlay = lv_obj_create(lv_layer_top());
     lv_obj_set_size(ota_overlay, LV_HOR_RES, LV_VER_RES);
     lv_obj_set_pos(ota_overlay, 0, 0);
@@ -68,7 +79,12 @@ void ota_gui_set_progress(int pct) {
     snprintf(buf, sizeof(buf), "%d%%", pct);
     lv_label_set_text(ota_pct_lbl, buf);
 
-    lv_timer_handler();
+    // Force a render only every 5% — a full LVGL flush during upload stalls
+    // TCP and tanks throughput. The bar/label values above are still set
+    // every percent so the next forced redraw (or the final 100%) is current.
+    if (pct == 100 || (pct % 5) == 0) {
+        lv_timer_handler();
+    }
 }
 
 #endif
