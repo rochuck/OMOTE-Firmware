@@ -56,6 +56,15 @@ poll_cb(lv_timer_t* /*t*/) {
     LyrionStatus st;
     bool ok = lyrion_pollStatus_HAL(&st);
 
+    // If we have no player yet (boot-time discovery ran before WiFi was up,
+    // or LMS was unreachable), keep retrying discovery so the tab populates
+    // on its own once the network catches up.
+    if (!ok && st.player_name.empty()) {
+        if (lyrion_discoverPlayers_HAL()) {
+            ok = lyrion_pollStatus_HAL(&st);
+        }
+    }
+
     // player_name is filled even when the HTTP call fails (HAL caches the
     // selected player). Always reflect the current selection so CHUP/CHDOW
     // gives immediate UI feedback.

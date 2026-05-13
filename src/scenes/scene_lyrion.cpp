@@ -53,25 +53,17 @@ scene_setKeys_lyrion() {
 
 void
 scene_start_sequence_lyrion(void) {
-    // Power on the AVR and select the audio input the LMS player feeds into.
-    // Adjust MARANTZ_INPUT_* to match your wiring (e.g. CD/AUX/TUNER) — left
-    // as MARANTZ_INPUT_GAME for now to mirror the Kodi scene.
-    for (int i = 0; i < 4; i++) {
-        executeCommand(MARANTZ_POWER_ON);
-        delay(10);
-    }
-    delay(500);
-    executeCommand(MARANTZ_INPUT_GAME);
+    // nothing here, lyrion is separate for now, we only control the players.
 }
 
 void
 scene_end_sequence_lyrion(void) {}
 
-std::string scene_name_lyrion     = "Lyrion";
+std::string scene_name_lyrion = "Lyrion";
 // Single-tab gui_list today. To add a library-browse tab later, register a new
 // GUI (e.g. gui_lyrion_browse) and append its tabName here:
 //   t_gui_list scene_lyrion_gui_list = {tabName_lyrion_nowplaying, tabName_lyrion_browse};
-t_gui_list  scene_lyrion_gui_list = {tabName_lyrion_nowplaying};
+t_gui_list scene_lyrion_gui_list = {tabName_lyrion_nowplaying};
 
 void
 register_scene_lyrion(void) {

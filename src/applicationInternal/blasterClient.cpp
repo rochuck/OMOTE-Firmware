@@ -10,6 +10,8 @@
 #include <HTTPClient.h>
 #include <Preferences.h>
 #include <WiFi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 namespace {
 
@@ -30,6 +32,7 @@ bool s_available  = false;
 String s_host;            // user override (host or IP) — empty if not set
 String s_resolved;        // working address (last_ip or mDNS-resolved)
 unsigned long s_next_recheck_ms = 0;
+volatile bool s_discover_in_flight = false;
 
 // Single sink for state changes so the status-bar icon stays in sync.
 // Only notifies the GUI on actual transitions to keep the LVGL flush queue quiet.
@@ -163,6 +166,27 @@ bool extract_data(const std::list<std::string>& payloads,
     return true;
 }
 
+// Runs try_discover() off the main task so the synchronous MDNS.queryService
+// (~3s timeout) doesn't freeze gui_loop().
+void discover_task(void*) {
+    try_discover();
+    s_next_recheck_ms = millis() + kRecheckIntervalMs;
+    s_discover_in_flight = false;
+    vTaskDelete(nullptr);
+}
+
+void start_discover_async() {
+    if (s_discover_in_flight) return;
+    s_discover_in_flight = true;
+    // 6 KB stack covers mDNS + HTTPClient + TLS-free GET. Priority 1 (low).
+    BaseType_t ok = xTaskCreate(discover_task, "blaster_disc", 6144,
+                                nullptr, 1, nullptr);
+    if (ok != pdPASS) {
+        s_discover_in_flight = false;
+        omote_log_w("[blaster] could not spawn discovery task\r\n");
+    }
+}
+
 }  // namespace
 
 void blaster_init() {
@@ -177,20 +201,19 @@ void blaster_init() {
         set_available(false);
         return;
     }
-    try_discover();
-    s_next_recheck_ms = millis() + kRecheckIntervalMs;
+    start_discover_async();
 }
 
 void blaster_loop() {
     if (!s_enabled) return;
     if (s_available) return;                              // only poll when down
+    if (s_discover_in_flight) return;                     // already running
     if ((long)(millis() - s_next_recheck_ms) < 0) return; // not yet
     if (WiFi.status() != WL_CONNECTED) {
         s_next_recheck_ms = millis() + kRecheckIntervalMs;
         return;
     }
-    try_discover();
-    s_next_recheck_ms = millis() + kRecheckIntervalMs;
+    start_discover_async();
 }
 
 bool blaster_isEnabled()   { return s_enabled; }
