@@ -3,7 +3,7 @@
 #include <list>
 #include <string>
 
-#if (ENABLE_WIFI_AND_MQTT == 1)
+#if (ENABLE_WIFI_AND_MQTT == 1) && defined(ARDUINO)
 
 // Call once after WiFi has associated. Tries the cached IP first
 // (fast path on every wake), falls back to mDNS browse on miss.

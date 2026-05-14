@@ -1,6 +1,6 @@
 #include "blasterClient.h"
 
-#if (ENABLE_WIFI_AND_MQTT == 1)
+#if (ENABLE_WIFI_AND_MQTT == 1) && defined(ARDUINO)
 
 #include "applicationInternal/gui/guiBase.h"
 #include "applicationInternal/omote_log.h"

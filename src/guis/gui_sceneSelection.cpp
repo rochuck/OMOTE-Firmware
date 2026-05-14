@@ -9,14 +9,17 @@
 #include "scenes/scene_appleTV.h"
 #include "scenes/scene_kodi.h"
 #include "scenes/scene_kodi_BT.h"
+#include "scenes/scene_lyrion.h"
 
 LV_IMG_DECLARE(kodiSelectIcon);
 LV_IMG_DECLARE(appleSelectIcon);
+LV_IMG_DECLARE(lyrionSelectIcon);
 
 static const lv_img_dsc_t* icon_for_scene(const std::string& scene_name) {
   if (scene_name == scene_name_appleTV) return &appleSelectIcon;
   if (scene_name == scene_name_kodi)    return &kodiSelectIcon;
   if (scene_name == scene_name_kodi_BT) return &kodiSelectIcon;
+  if (scene_name == scene_name_lyrion)  return &lyrionSelectIcon;
   return NULL;
 }
 

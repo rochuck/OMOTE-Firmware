@@ -13,6 +13,8 @@
 // browsing here.
 
 static lv_obj_t* s_player_label = nullptr;
+static lv_obj_t* s_power_icon   = nullptr; // top-left: green=on, gray=off
+static lv_obj_t* s_play_icon    = nullptr; // top-right: play / pause glyph
 static lv_obj_t* s_art_panel    = nullptr; // gray rounded fallback container
 static lv_obj_t* s_art_img      = nullptr; // album art (lv_img); hidden when no art
 static lv_obj_t* s_art_glyph    = nullptr; // ♪ shown when no art
@@ -27,6 +29,8 @@ static lv_timer_t* s_poll_timer = nullptr;
 static std::string s_displayed_track_id;
 static std::string s_displayed_player;
 static int         s_displayed_volume = -2; // -2 forces first paint
+static int         s_displayed_powered = -1; // -1 forces first paint
+static int         s_displayed_playing = -1; // -1 forces first paint
 
 static void
 format_mmss(int total_seconds, char* out, size_t out_len, bool negative) {
@@ -79,6 +83,29 @@ poll_cb(lv_timer_t* /*t*/) {
         } else {
             lv_label_set_text(s_player_label, name);
         }
+    }
+
+    // Power + play/pause indicators. When status is invalid, show both as
+    // unknown (dim gray + neutral glyph) so the user can tell the screen isn't
+    // just stale.
+    int powered = (ok && st.valid) ? (st.is_powered ? 1 : 0) : -1;
+    int playing = (ok && st.valid) ? (st.is_playing ? 1 : 0) : -1;
+    if (powered != s_displayed_powered) {
+        s_displayed_powered = powered;
+        lv_obj_set_style_text_color(s_power_icon,
+            powered == 1 ? lv_color_hex(0x00C000) :
+            powered == 0 ? lv_color_hex(0x606060) :
+                           lv_color_hex(0x404040),
+            LV_PART_MAIN);
+    }
+    if (playing != s_displayed_playing) {
+        s_displayed_playing = playing;
+        lv_label_set_text(s_play_icon, playing == 1 ? LV_SYMBOL_PLAY : LV_SYMBOL_PAUSE);
+        lv_obj_set_style_text_color(s_play_icon,
+            playing == 1 ? lv_color_hex(0x00C000) :
+            playing == 0 ? lv_color_hex(0xa0a0a0) :
+                           lv_color_hex(0x404040),
+            LV_PART_MAIN);
     }
 
     if (!ok || !st.valid) {
@@ -136,6 +163,20 @@ create_tab_content_lyrion_nowplaying(lv_obj_t* tab) {
     lv_obj_set_style_text_font(s_player_label, &lv_font_montserrat_16, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_player_label, lv_color_hex(0xFFD700), LV_PART_MAIN);
     lv_obj_align(s_player_label, LV_ALIGN_TOP_MID, 0, 6);
+
+    // Power indicator (top-left). Colored by current power state in poll_cb.
+    s_power_icon = lv_label_create(tab);
+    lv_label_set_text(s_power_icon, LV_SYMBOL_POWER);
+    lv_obj_set_style_text_font(s_power_icon, &lv_font_montserrat_16, LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_power_icon, lv_color_hex(0x404040), LV_PART_MAIN);
+    lv_obj_align(s_power_icon, LV_ALIGN_TOP_LEFT, 8, 6);
+
+    // Play/pause indicator (top-right). Glyph + color updated in poll_cb.
+    s_play_icon = lv_label_create(tab);
+    lv_label_set_text(s_play_icon, LV_SYMBOL_PAUSE);
+    lv_obj_set_style_text_font(s_play_icon, &lv_font_montserrat_16, LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_play_icon, lv_color_hex(0x404040), LV_PART_MAIN);
+    lv_obj_align(s_play_icon, LV_ALIGN_TOP_RIGHT, -8, 6);
 
     // Album art panel (fallback bg always visible; img on top hides bg when set)
     const int art_px = 140;
@@ -212,7 +253,9 @@ create_tab_content_lyrion_nowplaying(lv_obj_t* tab) {
     // newly-attached player shows up without rebooting.
     s_displayed_track_id.clear();
     s_displayed_player.clear();
-    s_displayed_volume = -2;
+    s_displayed_volume  = -2;
+    s_displayed_powered = -1;
+    s_displayed_playing = -1;
     lyrion_discoverPlayers_HAL();
     poll_cb(nullptr);
 
@@ -229,6 +272,8 @@ notify_tab_before_delete_lyrion_nowplaying(void) {
         s_poll_timer = nullptr;
     }
     s_player_label = nullptr;
+    s_power_icon   = nullptr;
+    s_play_icon    = nullptr;
     s_art_panel    = nullptr;
     s_art_img      = nullptr;
     s_art_glyph    = nullptr;
@@ -240,7 +285,9 @@ notify_tab_before_delete_lyrion_nowplaying(void) {
     s_time_remain  = nullptr;
     s_displayed_track_id.clear();
     s_displayed_player.clear();
-    s_displayed_volume = -2;
+    s_displayed_volume  = -2;
+    s_displayed_powered = -1;
+    s_displayed_playing = -1;
     lyrion_releaseArt_HAL();
 }
 

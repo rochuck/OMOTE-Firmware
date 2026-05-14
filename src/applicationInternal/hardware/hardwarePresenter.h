@@ -278,6 +278,7 @@ struct LyrionStatus {
     float       duration_s = 0.0f; // total track length, seconds (0 = unknown, e.g. stream)
     int         volume     = -1;   // 0-100, negative = unknown
     bool        is_playing = false;
+    bool        is_powered = false;
     bool        valid      = false;
 };
 void                init_lyrion_HAL(void);

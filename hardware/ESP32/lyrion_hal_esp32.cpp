@@ -87,21 +87,29 @@ build_rpc_body(const String& player_id_json, const String& command_array_json) {
     return body;
 }
 
-// Replace UTF-8 em-dash (E2 80 94) with ASCII '-'. The LVGL font in use here
-// doesn't include the em-dash glyph, so titles like "Artist — Track" render
-// with a missing-glyph box. Cheap byte-scan in place.
+// Replace common UTF-8 punctuation with ASCII equivalents — the Montserrat
+// subset built in doesn't include these glyphs, so they'd render as missing-
+// glyph boxes. Cheap byte-scan in place.
+//   E2 80 18/19  left/right single quote  -> '
+//   E2 80 1C/1D  left/right double quote  -> "
+//   E2 80 93/94  en-dash / em-dash        -> -
+//   E2 80 A6     horizontal ellipsis      -> ...
 static std::string
-strip_emdash(const char* s) {
+sanitize_text(const char* s) {
     std::string out;
     if (!s) return out;
     out.reserve(strlen(s));
     for (const unsigned char* p = (const unsigned char*) s; *p; ) {
-        if (p[0] == 0xE2 && p[1] == 0x80 && p[2] == 0x94) {
-            out += '-';
-            p += 3;
-        } else {
-            out += (char) *p++;
+        if (p[0] == 0xE2 && p[1] == 0x80) {
+            switch (p[2]) {
+                case 0x18: case 0x19: out += '\'';  p += 3; continue;
+                case 0x1C: case 0x1D: out += '"';   p += 3; continue;
+                case 0x93: case 0x94: out += '-';   p += 3; continue;
+                case 0xA6:            out += "..."; p += 3; continue;
+                default: break;
+            }
         }
+        out += (char) *p++;
     }
     return out;
 }
@@ -289,6 +297,7 @@ lyrion_pollStatus_HAL(LyrionStatus* out) {
     JsonVariantConst result = doc["result"];
     const char* mode        = result["mode"].as<const char*>();
     out->is_playing         = (mode && strcmp(mode, "play") == 0);
+    out->is_powered         = (result["power"].as<int>() != 0);
 
     // elapsed: at top level of result (called "time")
     // duration: may live at top level OR inside playlist_loop[0]. For streams
@@ -312,9 +321,9 @@ lyrion_pollStatus_HAL(LyrionStatus* out) {
     if (!pl.isNull() && pl.size() > 0) {
         JsonVariantConst t = pl[0];
         const char*      s;
-        if ((s = t["title"].as<const char*>()))  out->title  = strip_emdash(s);
-        if ((s = t["artist"].as<const char*>())) out->artist = strip_emdash(s);
-        if ((s = t["album"].as<const char*>()))  out->album  = strip_emdash(s);
+        if ((s = t["title"].as<const char*>()))  out->title  = sanitize_text(s);
+        if ((s = t["artist"].as<const char*>())) out->artist = sanitize_text(s);
+        if ((s = t["album"].as<const char*>()))  out->album  = sanitize_text(s);
         float track_dur = t["duration"].as<float>();
         if (track_dur > 0.5f) out->duration_s = track_dur;
 

@@ -21,3 +21,6 @@
 #if (ENABLE_KODI == 1)
 #include "windows_linux/kodi_hal_windows_linux.h"
 #endif
+#if (ENABLE_LYRION == 1)
+#include "windows_linux/lyrion_hal_windows_linux.h"
+#endif

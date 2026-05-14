@@ -8,6 +8,7 @@
 #include "applicationInternal/omote_log.h"
 #include "guis/gui_sceneSelection.h"
 #include "scenes/scene__default.h"
+#include "scenes/scene_allOff.h"
 
 void setLabelActiveScene() {
   if ((SceneLabel != NULL) && sceneExists(gui_memoryOptimizer_getActiveSceneName())) {
@@ -144,6 +145,10 @@ void handleScene(uint16_t command, commandData commandData, std::string addition
   omote_log_d("scene: scene handling finished, new scene %s is active\r\n", gui_memoryOptimizer_getActiveSceneName().c_str());
 
   guis_doTabCreationAfterGUIlistChanged(SCENE_GUI_LIST);
+
+  if (scene_name == scene_name_allOff) {
+    showSpecificGUI(MAIN_GUI_LIST, tabName_sceneSelection);
+  }
 }
 
 void showSpecificGUI(GUIlists GUIlist, std::string GUIname) {
