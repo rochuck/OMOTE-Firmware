@@ -77,7 +77,7 @@ poll_cb(lv_timer_t* /*t*/) {
     if (st.player_name != s_displayed_player || vol != s_displayed_volume) {
         s_displayed_player = st.player_name;
         s_displayed_volume = vol;
-        const char* name = st.player_name.empty() ? "—" : st.player_name.c_str();
+        const char* name = st.player_name.empty() ? "" : st.player_name.c_str();
         if (vol >= 0) {
             lv_label_set_text_fmt(s_player_label, "%s - " LV_SYMBOL_VOLUME_MID " %d%%", name, vol);
         } else {
@@ -109,7 +109,7 @@ poll_cb(lv_timer_t* /*t*/) {
     }
 
     if (!ok || !st.valid) {
-        lv_label_set_text(s_title_label,  "—");
+        lv_label_set_text(s_title_label,  "");
         lv_label_set_text(s_artist_label, "");
         lv_label_set_text(s_album_label,  "");
         lv_label_set_text(s_time_elapsed, "");
@@ -119,7 +119,7 @@ poll_cb(lv_timer_t* /*t*/) {
         return;
     }
 
-    lv_label_set_text(s_title_label,  st.title.empty()  ? "—" : st.title.c_str());
+    lv_label_set_text(s_title_label,  st.title.empty()  ? "" : st.title.c_str());
     lv_label_set_text(s_artist_label, st.artist.c_str());
     lv_label_set_text(s_album_label,  st.album.c_str());
     // Compose an art cache key from coverid + title + artist. coverid alone is
@@ -159,7 +159,7 @@ create_tab_content_lyrion_nowplaying(lv_obj_t* tab) {
 
     // Top: player name
     s_player_label = lv_label_create(tab);
-    lv_label_set_text(s_player_label, "—");
+    lv_label_set_text(s_player_label, "");
     lv_obj_set_style_text_font(s_player_label, &lv_font_montserrat_16, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_player_label, lv_color_hex(0xFFD700), LV_PART_MAIN);
     lv_obj_align(s_player_label, LV_ALIGN_TOP_MID, 0, 6);
@@ -178,12 +178,14 @@ create_tab_content_lyrion_nowplaying(lv_obj_t* tab) {
     lv_obj_set_style_text_color(s_play_icon, lv_color_hex(0x404040), LV_PART_MAIN);
     lv_obj_align(s_play_icon, LV_ALIGN_TOP_RIGHT, -8, 6);
 
-    // Album art panel (fallback bg always visible; img on top hides bg when set)
-    const int art_px = 140;
+    // Album art panel (fallback bg always visible; img on top hides bg when set).
+    // Track/artist/album labels are overlaid on the bottom of the art with a
+    // semi-transparent dark band so they stay readable against any cover.
+    const int art_px = 200;
     s_art_panel = lv_obj_create(tab);
     lv_obj_remove_style_all(s_art_panel);
     lv_obj_set_size(s_art_panel, art_px, art_px);
-    lv_obj_align(s_art_panel, LV_ALIGN_TOP_MID, 0, 32);
+    lv_obj_align(s_art_panel, LV_ALIGN_TOP_MID, 0, 28);
     lv_obj_set_style_radius(s_art_panel, 10, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(s_art_panel, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_bg_color(s_art_panel, lv_color_hex(0x303030), LV_PART_MAIN);
@@ -200,32 +202,44 @@ create_tab_content_lyrion_nowplaying(lv_obj_t* tab) {
     lv_obj_align(s_art_img, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_flag(s_art_img, LV_OBJ_FLAG_HIDDEN);
 
-    // Bottom three rows: title, artist, album
-    int row_y = 32 + art_px + 10;
-    s_title_label = lv_label_create(tab);
-    lv_obj_set_width(s_title_label, 220);
+    // Dark band at the bottom of the art panel that holds the three text rows.
+    // Height covers the three labels with a few pixels of breathing room.
+    const int overlay_h = 64;
+    lv_obj_t* overlay = lv_obj_create(s_art_panel);
+    lv_obj_remove_style_all(overlay);
+    lv_obj_set_size(overlay, art_px, overlay_h);
+    lv_obj_align(overlay, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_opa(overlay, LV_OPA_70, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(overlay, lv_color_black(), LV_PART_MAIN);
+    lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
+
+    const int label_w = art_px - 8;
+    s_title_label = lv_label_create(overlay);
+    lv_obj_set_width(s_title_label, label_w);
     lv_label_set_long_mode(s_title_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
-    lv_label_set_text(s_title_label, "—");
+    lv_label_set_text(s_title_label, "");
     lv_obj_set_style_text_align(s_title_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(s_title_label, &lv_font_montserrat_16, LV_PART_MAIN);
-    lv_obj_align(s_title_label, LV_ALIGN_TOP_MID, 0, row_y);
+    lv_obj_set_style_text_color(s_title_label, lv_color_white(), LV_PART_MAIN);
+    lv_obj_align(s_title_label, LV_ALIGN_TOP_MID, 0, 2);
 
-    s_artist_label = lv_label_create(tab);
-    lv_obj_set_width(s_artist_label, 220);
+    s_artist_label = lv_label_create(overlay);
+    lv_obj_set_width(s_artist_label, label_w);
     lv_label_set_long_mode(s_artist_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_text(s_artist_label, "");
     lv_obj_set_style_text_align(s_artist_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(s_artist_label, &lv_font_montserrat_12, LV_PART_MAIN);
-    lv_obj_align(s_artist_label, LV_ALIGN_TOP_MID, 0, row_y + 24);
+    lv_obj_set_style_text_color(s_artist_label, lv_color_white(), LV_PART_MAIN);
+    lv_obj_align(s_artist_label, LV_ALIGN_TOP_MID, 0, 24);
 
-    s_album_label = lv_label_create(tab);
-    lv_obj_set_width(s_album_label, 220);
+    s_album_label = lv_label_create(overlay);
+    lv_obj_set_width(s_album_label, label_w);
     lv_label_set_long_mode(s_album_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_text(s_album_label, "");
     lv_obj_set_style_text_align(s_album_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(s_album_label, &lv_font_montserrat_12, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_album_label, lv_color_hex(0xa0a0a0), LV_PART_MAIN);
-    lv_obj_align(s_album_label, LV_ALIGN_TOP_MID, 0, row_y + 42);
+    lv_obj_set_style_text_color(s_album_label, lv_color_hex(0xc0c0c0), LV_PART_MAIN);
+    lv_obj_align(s_album_label, LV_ALIGN_TOP_MID, 0, 42);
 
     // Progress bar + time labels, bottom-anchored so they stay visible even if
     // the tab content area is shorter than expected.

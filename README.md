@@ -204,6 +204,53 @@ Add entries for each light you want to control. The entity ID can be found in Ho
 
 The feature is `#if (ENABLE_WEBSOCKET == 1)` gated. It is enabled by default in `[env:esp32-s3-Rev5andHigher]`. To disable it, change `-D ENABLE_WEBSOCKET=1` to `-D ENABLE_WEBSOCKET=0` in [platformio.ini](platformio.ini) — this frees ~10 KB of firmware space if needed.
 
+## Lyrion (LMS) Now-Playing Scene
+
+The Lyrion scene controls one or more players attached to a [Lyrion Music Server](https://lyrion.org) (formerly Logitech Media Server / squeezebox server) over its JSON-RPC API. No pairing — just WiFi and the server's IP.
+
+### Configure the server address
+
+Set the LMS host and port in `src/secrets_override.h` (port 9000 is the LMS default):
+
+```cpp
+#undef LYRION_HOST
+#undef LYRION_PORT
+
+#define LYRION_HOST "192.168.x.x"   // your LMS machine's IP
+#define LYRION_PORT 9000
+```
+
+Players (squeezelite instances, picoreplayer boxes, Squeezebox hardware, etc.) are discovered automatically from the server every time you open the scene — no per-player config needed. Newly-attached players show up without rebooting the remote.
+
+### Using the scene
+
+Pick **Lyrion** from the scene-selection grid. The now-playing tab shows:
+
+- **Top bar:** power indicator (green = on, gray = off) on the left, current player name and volume in the centre, play/pause indicator on the right.
+- **Album art** (200×200) fetched from `/music/current/cover.png`, with the title / artist / album overlaid on a translucent band at the bottom. A ♪ glyph is shown when no art is available.
+- **Progress bar** with elapsed / remaining times. For streams with unknown duration, only elapsed is shown.
+
+Status is polled every 500 ms, so play/pause, track changes, and player switches feel immediate.
+
+### Key bindings
+
+| Key | Short press | Long press |
+|---|---|---|
+| PLAY | Play / pause | — |
+| STOP | Stop | Power toggle (current player) |
+| REWI / FORW | Previous / next track (repeats) | — |
+| VOL+ / VOL− | Volume ±5 (repeats) | — |
+| MUTE | Mute toggle | — |
+| CH▲ / CH▼ | Switch to next / previous player | — |
+
+D-pad and OK are intentionally unbound for now — they're reserved for a future library-browse tab so the scene-level keymap won't need a tab-aware override later.
+
+When you leave the Lyrion scene (pick another scene, or the all-off scene runs), all known players are powered off.
+
+### Disabling Lyrion
+
+The feature is `#if (ENABLE_LYRION == 1)` gated. It is enabled by default — change `-D ENABLE_LYRION=1` to `-D ENABLE_LYRION=0` in [platformio.ini](platformio.ini) to remove the scene and HAL.
+
 ---
 
 GUIS - I've used Squareline Studio for some of this stuff, and cherry-picked the output code

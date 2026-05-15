@@ -23,7 +23,7 @@ void
 scene_setKeys_lyrion() {
     key_repeatModes_lyrion = {
 
-        {KEY_STOP,  SHORT            },    {KEY_REWI,  SHORT_REPEATED   },    {KEY_PLAY,  SHORT            },    {KEY_FORW,  SHORT_REPEATED   },
+        {KEY_STOP,  SHORTorLONG      },    {KEY_REWI,  SHORT_REPEATED   },    {KEY_PLAY,  SHORT            },    {KEY_FORW,  SHORT_REPEATED   },
         {KEY_VOLUP, SHORT_REPEATED   },                                                                          {KEY_MUTE,  SHORT            },
         {KEY_VOLDO, SHORT_REPEATED   },
         // d-pad / OK left unbound in v1; reserved for the future browse tab so the scene-level

@@ -28,12 +28,14 @@
 #include "secrets.h"
 
 // Album art display size (square). Matches the LCD layout: 240x320 with the
-// player name on top and three text rows below leaves ~140px square for art.
-static const int LYRION_ART_PX = 140;
+// player name on top and text overlaid on the bottom of the art leaves room
+// for a 200px square.
+static const int LYRION_ART_PX = 200;
 
-// Soft cap on PNG download size. LMS-resized covers at 140x140 are typically
-// 10-30 KB; 80 KB is a generous ceiling that still leaves plenty of PSRAM.
-static const size_t LYRION_ART_MAX_BYTES = 80 * 1024;
+// Soft cap on PNG download size. LMS-resized covers at 200x200 land in the
+// 20-60 KB range; 160 KB is a generous ceiling that still leaves plenty of
+// PSRAM.
+static const size_t LYRION_ART_MAX_BYTES = 160 * 1024;
 
 struct PlayerEntry {
     std::string id;   // MAC address, e.g. "aa:bb:cc:dd:ee:ff"

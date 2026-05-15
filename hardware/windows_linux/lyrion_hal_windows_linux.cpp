@@ -26,7 +26,7 @@
 #include "cJSON.h"
 #include "secrets.h"
 
-static const int    LYRION_ART_PX        = 140;
+static const int    LYRION_ART_PX        = 200;
 static const size_t LYRION_ART_MAX_BYTES = 200 * 1024; // sim has plenty of RAM
 
 struct PlayerEntry {
