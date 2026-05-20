@@ -59,8 +59,8 @@ register_device_marantzAmp() {
                                      {std::to_string(IR_PROTOCOL_GLOBALCACHE),
                                       "36000,1,1,32,32,64,64,64,32,32,32,32,32,32,161,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,64,"
                                       "64,64,64,2731,32,32,64,64,64,32,32,32,32,32,32,161,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,"
-                                      "64,64,64,64,1200"}));
-    register_command(&MARANTZ_INPUT_DTV, makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA12AD5"}));
+                                      "64,64,64,64,1200"}, "AMP DVD"));
+    register_command(&MARANTZ_INPUT_DTV, makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA12AD5"}, "AMP DTV"));
 
     // HDMI inputs from the official Marantz 2015 NR/SR/AV IR Command Chart, converted from
     // Pronto hex to GlobalCache decimal at 36 kHz (same approach as POWER_ON/OFF below).
@@ -71,14 +71,14 @@ register_device_marantzAmp() {
                                      {std::to_string(IR_PROTOCOL_GLOBALCACHE),
                                       "36000,1,1,32,32,32,32,64,32,32,64,32,32,32,32,32,161,32,32,32,32,32,32,32,32,32,32,64,32,32,32,"
                                       "32,32,32,32,32,32,32,2731,32,32,32,32,64,32,32,64,32,32,32,32,32,161,32,32,32,32,32,32,32,32,32,"
-                                      "32,64,32,32,32,32,32,32,32,32,32,32,1200"}));
+                                      "32,64,32,32,32,32,32,32,32,32,32,32,1200"}, "AMP BD"));
 
     // GAME — Pronto: 0000 0071 0000 0011 ... (17 pairs, single frame as documented in chart)
     register_command(&MARANTZ_INPUT_GAME,
                      makeCommandData(IR,
                                      {std::to_string(IR_PROTOCOL_GLOBALCACHE),
                                       "36000,1,1,31,31,64,64,64,31,31,31,31,31,31,160,31,31,31,31,31,31,31,31,31,31,31,64,31,31,31,31,"
-                                      "31,31,31,31,64,2721"}));
+                                      "31,31,31,31,64,2721"}, "AMP GAME"));
 
     // DSS / CBL/SAT — Pronto: 0000 0073 0000 0020 ... (32 pairs, three RC5-Ext frames)
     register_command(&MARANTZ_INPUT_DSS,
@@ -86,7 +86,7 @@ register_device_marantzAmp() {
                                      {std::to_string(IR_PROTOCOL_GLOBALCACHE),
                                       "36000,1,1,32,32,32,32,64,32,32,64,32,32,64,64,32,32,32,32,32,32,32,32,32,32,32,3163,32,32,32,32,"
                                       "64,32,32,64,32,32,64,64,32,32,32,32,32,32,32,32,32,32,32,3163,32,32,32,32,64,32,32,64,32,32,64,"
-                                      "64,32,32,32,1176"}));
+                                      "64,32,32,32,1176"}, "AMP DSS"));
     // register_command(&MARANTZ_INPUT_VCR           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1F00F"}));
     // register_command(&MARANTZ_POWER_TOGGLE        , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1F807"}));
     // register_command(&MARANTZ_INPUT_CD            , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1A857"}));
@@ -97,17 +97,17 @@ register_device_marantzAmp() {
     // register_command(&MARANTZ_PRESETGROUP         , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA148B7"}));
     // register_command(&MARANTZ_PRESETSTATION_MINUS , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA18877"}));
     // register_command(&MARANTZ_PRESETSTATION_PLUS  , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA108F7"}));
-    register_command(&MARANTZ_SDIRECT, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x422"})); // c22 and 422
+    register_command(&MARANTZ_SDIRECT, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x422"}, "AMP DIRECT")); // c22 and 422
     // register_command(&MARANTZ_5CHSTEREO           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1E916"}));
     // register_command(&MARANTZ_NIGHT               , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1A956"}));
     // register_command(&MARANTZ_SLEEP               , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1EA15"}));
     // register_command(&MARANTZ_TEST                , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1A15E"}));
     // register_command(&MARANTZ_STRAIGHT            , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA16A95"}));
-    register_command(&MARANTZ_VOL_MINUS, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x411"}));
-    register_command(&MARANTZ_VOL_PLUS, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x410"}));
+    register_command(&MARANTZ_VOL_MINUS, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x411"}, "AMP VOL-"));
+    register_command(&MARANTZ_VOL_PLUS, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x410"}, "AMP VOL+"));
     // register_command(&MARANTZ_PROG_MINUS          , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA19A65"}));
     // register_command(&MARANTZ_PROG_PLUS           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA11AE5"}));
-    register_command(&MARANTZ_MUTE_TOGGLE, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x40D"}));
+    register_command(&MARANTZ_MUTE_TOGGLE, makeCommandData(IR, {std::to_string(IR_PROTOCOL_RC5), "0x40D"}, "AMP MUTE"));
     // register_command(&MARANTZ_LEVEL               , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1619E"}));
     // register_command(&MARANTZ_SETMENU             , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA139C6"}));
     // register_command(&MARANTZ_SETMENU_UP          , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA119E6"}));
@@ -125,7 +125,7 @@ register_device_marantzAmp() {
                                      {std::to_string(IR_PROTOCOL_GLOBALCACHE),
                                       "36000,1,1,32,32,32,32,32,32,64,32,32,32,32,32,32,161,32,32,32,64,32,32,64,32,32,32,32,32,32,"
                                       "32,32,32,32,32,32,64,32,2731,32,32,32,32,32,32,64,32,32,32,32,32,32,161,32,32,32,64,32,32,"
-                                      "64,32,32,32,32,32,32,32,32,32,32,32,32,64,32,1200"}));
+                                      "64,32,32,32,32,32,32,32,32,32,32,32,32,64,32,1200"}, "AMP ON"));
     // Discrete power-off from Pronto hex (biphase, two frames) converted to GlobalCache at 36kHz.
     // Pronto: 0000 0071 0000 0022 ... (34 repeat pairs — two pairs shorter than ON)
     register_command(&MARANTZ_POWER_OFF,
@@ -133,5 +133,5 @@ register_device_marantzAmp() {
                                      {std::to_string(IR_PROTOCOL_GLOBALCACHE),
                                       "36000,1,1,32,32,32,32,32,32,64,32,32,32,32,32,32,161,32,32,32,64,32,32,64,32,32,32,32,32,32,"
                                       "32,32,32,32,64,64,2731,32,32,32,32,32,32,64,32,32,32,32,32,32,161,32,32,32,64,32,32,64,32,"
-                                      "32,32,32,32,32,32,32,32,32,64,64,1200"}));
+                                      "32,32,32,32,32,32,32,32,32,64,64,1200"}, "AMP OFF"));
 }

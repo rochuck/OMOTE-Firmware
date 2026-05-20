@@ -121,6 +121,7 @@ enum commandHandlers {
 struct commandData {
     commandHandlers        commandHandler;
     std::list<std::string> commandPayloads;
+    std::string            commandName = ""; // optional human label, e.g. "ATV PLAY"
 };
 
 // register a command and give it a command id
@@ -133,7 +134,7 @@ get_uniqueCommandID(uint16_t* command);
 void
 register_keyboardCommands();
 commandData
-makeCommandData(commandHandlers a, std::list<std::string> b);
+makeCommandData(commandHandlers a, std::list<std::string> b, std::string name = "");
 void
 executeCommand(uint16_t command, std::string additionalPayload = "");
 

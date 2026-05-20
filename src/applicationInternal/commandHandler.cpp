@@ -170,8 +170,11 @@ register_keyboardCommands() {
 }
 
 commandData
-makeCommandData(commandHandlers a, std::list<std::string> b) {
-    commandData c = {a, b};
+makeCommandData(commandHandlers a, std::list<std::string> b, std::string name) {
+    commandData c;
+    c.commandHandler  = a;
+    c.commandPayloads = b;
+    c.commandName     = name;
     return c;
 }
 
@@ -201,7 +204,7 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
         int proto = std::stoi(protocol);
 #if (ENABLE_WIFI_AND_MQTT == 1)
         if (blaster_isEnabled() && blaster_isAvailable() &&
-            blaster_send(proto, commandData.commandPayloads, additionalPayload)) {
+            blaster_send(proto, commandData.commandPayloads, additionalPayload, commandData.commandName)) {
             break;  // forwarded to OMOTE-Blaster — done
         }
 #endif

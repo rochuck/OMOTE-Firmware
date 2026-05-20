@@ -5,6 +5,7 @@
 #include "applicationInternal/scenes/sceneRegistry.h"
 #include "applicationInternal/hardware/hardwarePresenter.h"
 #include "applicationInternal/commandHandler.h"
+#include "applicationInternal/blasterClient.h"
 #include "applicationInternal/omote_log.h"
 #include "guis/gui_sceneSelection.h"
 #include "scenes/scene__default.h"
@@ -139,6 +140,10 @@ void handleScene(uint16_t command, commandData commandData, std::string addition
   }
 
   gui_memoryOptimizer_setActiveSceneName(scene_name);
+
+  // Push the new scene to the blaster so its display can reflect it even when
+  // the scene change sends no IR (e.g. "Off"). No-op if the blaster is absent.
+  blaster_notifyScene(scene_name);
 
   if (SceneLabel != NULL) {lv_label_set_text(SceneLabel, gui_memoryOptimizer_getActiveSceneName().c_str());}
 

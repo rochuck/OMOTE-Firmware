@@ -24,7 +24,13 @@ bool blaster_isAvailable();
 // internal state to !available so we re-discover next wake/tick.
 bool blaster_send(int protocol,
                   std::list<std::string> payloads,
-                  std::string additionalPayload);
+                  std::string additionalPayload,
+                  std::string commandName = "");
+
+// Push the active scene name to the blaster so its display can show it even
+// when no IR is sent (e.g. switching to "Off"). No-op when the blaster isn't
+// available. Call from the scene-change chokepoint.
+void blaster_notifyScene(const std::string& sceneName);
 
 #else
 
@@ -32,6 +38,7 @@ inline void blaster_init() {}
 inline void blaster_loop() {}
 inline bool blaster_isEnabled()   { return false; }
 inline bool blaster_isAvailable() { return false; }
-inline bool blaster_send(int, std::list<std::string>, std::string) { return false; }
+inline bool blaster_send(int, std::list<std::string>, std::string, std::string = "") { return false; }
+inline void blaster_notifyScene(const std::string&) {}
 
 #endif

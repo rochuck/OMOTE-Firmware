@@ -3,6 +3,7 @@
 #if (ENABLE_WIFI_AND_MQTT == 1) && defined(ARDUINO)
 
 #include "applicationInternal/gui/guiBase.h"
+#include "applicationInternal/hardware/hardwarePresenter.h"
 #include "applicationInternal/omote_log.h"
 
 #include <Arduino.h>
@@ -192,6 +193,41 @@ bool extract_data(const std::list<std::string>& payloads,
     return true;
 }
 
+// Escape a free-text string (scene/command name) for embedding in a JSON
+// string literal. These come from user-facing labels, so play it safe.
+std::string json_escape(const std::string& s) {
+    std::string o;
+    o.reserve(s.size() + 4);
+    for (char c : s) {
+        switch (c) {
+        case '"':  o += "\\\""; break;
+        case '\\': o += "\\\\"; break;
+        case '\n': o += "\\n";  break;
+        case '\r': o += "\\r";  break;
+        case '\t': o += "\\t";  break;
+        default:
+            if ((unsigned char)c >= 0x20) o += c;  // drop control chars
+        }
+    }
+    return o;
+}
+
+// POST a JSON body to a path on the resolved blaster. Returns the HTTP status
+// code, or <0 on transport failure. Caller decides what a failure means.
+int post_json(const char* path, const String& body) {
+    if (s_resolved.length() == 0) return -1;
+    String url = "http://" + s_resolved + ":" + String(kBlasterPort) + path;
+    HTTPClient http;
+    http.setTimeout(kSendTimeoutMs);
+    http.setConnectTimeout(kSendTimeoutMs);
+    if (!http.begin(url)) return -1;
+    http.setReuse(false);  // close socket after response; see handshake() note
+    http.addHeader("Content-Type", "application/json");
+    int code = http.POST((uint8_t*)body.c_str(), body.length());
+    http.end();
+    return code;
+}
+
 // Runs try_discover() off the main task so the synchronous MDNS.queryService
 // (~3s timeout) doesn't freeze gui_loop().
 void discover_task(void*) {
@@ -247,7 +283,8 @@ bool blaster_isAvailable() { return s_available; }
 
 bool blaster_send(int protocol,
                   std::list<std::string> payloads,
-                  std::string additionalPayload) {
+                  std::string additionalPayload,
+                  std::string commandName) {
     if (!s_enabled || !s_available || s_resolved.length() == 0) return false;
 
     String data;
@@ -257,37 +294,26 @@ bool blaster_send(int protocol,
         return false;
     }
 
-    // Build JSON manually — payload is tiny and avoids a new dep.
-    char body[160];
-    int bw;
+    // Build JSON. data is bare hex (no escaping needed); scene/name are
+    // user-facing labels so they get escaped. scene/name are additive — the
+    // blaster ignores them if it's an older build.
+    String body = "{\"protocol\":" + String(protocol) + ",\"data\":\"" + data + "\"";
     if (nbits > 0 && repeat >= 0) {
-        bw = snprintf(body, sizeof(body),
-                      "{\"protocol\":%d,\"data\":\"%s\",\"nbits\":%d,\"repeat\":%d}",
-                      protocol, data.c_str(), nbits, repeat);
-    } else {
-        bw = snprintf(body, sizeof(body),
-                      "{\"protocol\":%d,\"data\":\"%s\"}",
-                      protocol, data.c_str());
+        body += ",\"nbits\":" + String(nbits) + ",\"repeat\":" + String(repeat);
     }
-    if (bw <= 0 || bw >= (int)sizeof(body)) {
-        omote_log_w("[blaster] body buffer overflow\r\n");
-        return false;
+    std::string scene = get_activeScene();
+    if (!scene.empty()) {
+        body += ",\"scene\":\"" + String(json_escape(scene).c_str()) + "\"";
     }
+    if (!commandName.empty()) {
+        body += ",\"name\":\"" + String(json_escape(commandName).c_str()) + "\"";
+    }
+    body += "}";
 
-    String url = "http://" + s_resolved + ":" + String(kBlasterPort) + "/send";
-    HTTPClient http;
-    http.setTimeout(kSendTimeoutMs);
-    http.setConnectTimeout(kSendTimeoutMs);
-    if (!http.begin(url)) return false;
-    http.setReuse(false);  // close socket after response; see handshake() note
-    http.addHeader("Content-Type", "application/json");
-
-    int code = http.POST((uint8_t*)body, bw);
-    http.end();
-
+    int code = post_json("/send", body);
     if (code >= 200 && code < 300) {
-        omote_log_d("[blaster] send proto=%d data=%s -> %d\r\n",
-                    protocol, data.c_str(), code);
+        omote_log_d("[blaster] tx /send scene=\"%s\" cmd=\"%s\" proto=%d data=%s -> %d\r\n",
+                    scene.c_str(), commandName.c_str(), protocol, data.c_str(), code);
         return true;
     }
 
@@ -295,6 +321,21 @@ bool blaster_send(int protocol,
     set_available(false);
     s_next_recheck_ms = millis() + kRecheckIntervalMs;
     return false;
+}
+
+void blaster_notifyScene(const std::string& sceneName) {
+    if (!s_enabled || !s_available || s_resolved.length() == 0) return;
+
+    String body = "{\"scene\":\"" + String(json_escape(sceneName).c_str()) + "\"}";
+    int code = post_json("/scene", body);
+    if (code >= 200 && code < 300) {
+        omote_log_d("[blaster] tx /scene scene=\"%s\" -> %d\r\n", sceneName.c_str(), code);
+        return;
+    }
+
+    omote_log_w("[blaster] scene notify -> %d; marking unavailable\r\n", code);
+    set_available(false);
+    s_next_recheck_ms = millis() + kRecheckIntervalMs;
 }
 
 #endif  // ENABLE_WIFI_AND_MQTT

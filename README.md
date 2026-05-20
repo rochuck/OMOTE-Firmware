@@ -42,6 +42,62 @@ If `OMOTE.local` doesn't resolve, replace `upload_port` in `platformio.ini` (or 
 
 No other source files need touching; all OTA code is `#if (ENABLE_OTA == 1)` gated in `hardware/ESP32/ota_hal_esp32.cpp`.
 
+## IR Blaster (network IR forwarding)
+
+The remote's onboard IR LED has limited range and angle. The [OMOTE-Blaster](https://github.com/rochuck/OMOTE-Blaster) is a small mains-powered ESP8266 device that sits in line-of-sight of your equipment and sends IR on the remote's behalf. The remote keeps doing all the UI / scene / code-table work; the blaster is a dumb sender. When the blaster is reachable, IR commands are forwarded to it over the network; otherwise the remote falls back to its local LED automatically — no configuration switch required.
+
+This lives in `applicationInternal/blasterClient.cpp` and is gated by `ENABLE_WIFI_AND_MQTT`.
+
+### How it works
+
+Every IR send already funnels through one bottleneck — the `IR:` case in `commandHandler.cpp`. There, if `blaster_isEnabled() && blaster_isAvailable()`, the command is POSTed to the blaster; on any failure it transparently drives the local IR LED instead.
+
+The blaster is discovered automatically:
+
+1. **User override** — a host/IP saved in NVS (`blaster`/`host`), if set.
+2. **Cached IP** — the last address that handshaked successfully (`blaster`/`last_ip`).
+3. **mDNS** — browse for `_omote-blaster._tcp`.
+
+A `GET /status` handshake confirms identity (the body must contain `omote-blaster`) before the address is used. Discovery runs off the main task so it never blocks the GUI, and re-checks roughly every 60 s while the blaster is down.
+
+### Protocol
+
+All requests are JSON over HTTP to port 80 on the blaster.
+
+**`POST /send`** — fire an IR command:
+
+```jsonc
+{
+  "protocol": 4,            // IRremoteProtocols.h enum value (must match byte-for-byte)
+  "data": "0x77E1FA80",     // hex code; may be "data:nbits:repeat"
+  "nbits": 32,              // optional; omitted = blaster's per-protocol default
+  "repeat": 1,              // optional; omitted = default
+  "scene": "Apple TV",      // optional; active scene name (for the blaster's display)
+  "name": "ATV PLAY"        // optional; human-readable label of this command
+}
+```
+
+**`POST /scene`** — push the active scene when it changes, even when no IR is sent (e.g. switching to "Off"). Sent automatically from the scene-change path so the blaster's display stays current:
+
+```json
+{ "scene": "Off" }
+```
+
+**`GET /status`** — health + display state: `{ ok, service, version, uptime, rssi, ip, scene, lastCommand, lastCommandAgo }`.
+
+`scene` and `name` are optional and additive — older blaster builds simply ignore them. They exist to drive a (planned) status display on the blaster showing the current scene, last command, IP, and uptime.
+
+### Human-readable command names
+
+`scene` comes for free from `get_activeScene()`. The command `name` is supplied per command via the optional third argument to `makeCommandData()`:
+
+```cpp
+register_command(&APPLETV_PLAY,
+                 makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x77E1FA80"}, "ATV PLAY"));
+```
+
+Names are kept terse as `<DEVICE> <ACTION>` so they fit a small display (e.g. `ATV PLAY`, `TV HDMI5`, `AMP VOL+`). The argument is optional — commands left without a name still send fine; the blaster falls back to showing the raw code. Only IR-protocol commands reach the blaster, so only the IR device files (`devices/.../device_*`) carry names.
+
 ## Apple TV Companion Protocol (App Launcher)
 
 The `esp32-s3-Rev5andHigher` environment includes a C++ port of the Apple TV [Companion protocol](https://github.com/postlund/pyatv/tree/master/pyatv/protocols/companion), the same protocol used by the iOS TV Remote app. It lets the remote launch specific apps by bundle ID with a single button press.

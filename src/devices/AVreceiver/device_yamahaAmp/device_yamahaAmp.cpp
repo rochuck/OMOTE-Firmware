@@ -40,8 +40,8 @@ void register_device_yamahaAmp() {
   // tested with Yamaha RX-V359, works also with others
 
   // Only activate the commands that are used. Every command takes 100 bytes, wether used or not.
-  register_command(&YAMAHA_INPUT_DVD           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1837C"}));
-  register_command(&YAMAHA_INPUT_DTV           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA12AD5"}));
+  register_command(&YAMAHA_INPUT_DVD           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1837C"}, "YAMP DVD"));
+  register_command(&YAMAHA_INPUT_DTV           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA12AD5"}, "YAMP DTV"));
   // register_command(&YAMAHA_INPUT_VCR           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1F00F"}));
   // register_command(&YAMAHA_POWER_TOGGLE        , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1F807"}));
   // register_command(&YAMAHA_INPUT_CD            , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1A857"}));
@@ -52,25 +52,25 @@ void register_device_yamahaAmp() {
   // register_command(&YAMAHA_PRESETGROUP         , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA148B7"}));
   // register_command(&YAMAHA_PRESETSTATION_MINUS , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA18877"}));
   // register_command(&YAMAHA_PRESETSTATION_PLUS  , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA108F7"}));
-  register_command(&YAMAHA_STANDARD            , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA109F6"}));
+  register_command(&YAMAHA_STANDARD            , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA109F6"}, "YAMP STD"));
   // register_command(&YAMAHA_5CHSTEREO           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1E916"}));
   // register_command(&YAMAHA_NIGHT               , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1A956"}));
   // register_command(&YAMAHA_SLEEP               , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1EA15"}));
   // register_command(&YAMAHA_TEST                , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1A15E"}));
   // register_command(&YAMAHA_STRAIGHT            , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA16A95"}));
-  register_command(&YAMAHA_VOL_MINUS           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1D827"}));
-  register_command(&YAMAHA_VOL_PLUS            , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA158A7"}));
+  register_command(&YAMAHA_VOL_MINUS           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1D827"}, "YAMP VOL-"));
+  register_command(&YAMAHA_VOL_PLUS            , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA158A7"}, "YAMP VOL+"));
   // register_command(&YAMAHA_PROG_MINUS          , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA19A65"}));
   // register_command(&YAMAHA_PROG_PLUS           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA11AE5"}));
-  register_command(&YAMAHA_MUTE_TOGGLE         , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA138C7"}));
+  register_command(&YAMAHA_MUTE_TOGGLE         , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA138C7"}, "YAMP MUTE"));
   // register_command(&YAMAHA_LEVEL               , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1619E"}));
   // register_command(&YAMAHA_SETMENU             , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA139C6"}));
   // register_command(&YAMAHA_SETMENU_UP          , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA119E6"}));
   // register_command(&YAMAHA_SETMENU_DOWN        , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA19966"}));
   // register_command(&YAMAHA_SETMENU_MINUS       , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1CA35"}));
   // register_command(&YAMAHA_SETMENU_PLUS        , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA14AB5"}));
-  register_command(&YAMAHA_POWER_OFF           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA17887"}));
-  register_command(&YAMAHA_POWER_ON            , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1B847"}));
+  register_command(&YAMAHA_POWER_OFF           , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA17887"}, "YAMP OFF"));
+  register_command(&YAMAHA_POWER_ON            , makeCommandData(IR, {std::to_string(IR_PROTOCOL_NEC), "0x5EA1B847"}, "YAMP ON"));
 
   // GC seems not to work
   //register_command(&YAMAHA_POWER_TOGGLE       , makeCommandData(IR, {std::to_string(IR_PROTOCOL_GLOBALCACHE), "38000,1,69,341,170,21,21,21,64,21,64,21,64,21,64,21,64,21,64,21,21,21,64,21,21,21,21,21,21,21,21,21,21,21,21,21,64,21,21,21,64,21,21,21,64,21,21,21,64,21,21,21,21,21,64,21,21,21,64,21,21,21,64,21,21,21,64,21,64,21,1517,341,85,21,3655"}));

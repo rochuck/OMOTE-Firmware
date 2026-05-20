@@ -72,53 +72,53 @@ register_device_sharpTV() {
     // Only activate the commands that are used. Every command takes 100 bytes, wether used or not.
 
     // Digit keys: device=16
-    register_command(&SHARP_NUM_1, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"})); // device=16, fn=128
-    register_command(&SHARP_NUM_2, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4102"})); // device=16, fn=64
-    register_command(&SHARP_NUM_3, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4302"})); // device=16, fn=192
-    register_command(&SHARP_NUM_4, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4082"})); // device=16, fn=32
-    register_command(&SHARP_NUM_5, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4282"})); // device=16, fn=160
-    register_command(&SHARP_NUM_6, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4182"})); // device=16, fn=96
-    register_command(&SHARP_NUM_7, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4382"})); // device=16, fn=224
-    register_command(&SHARP_NUM_8, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4042"})); // device=16, fn=16
-    register_command(&SHARP_NUM_9, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4242"})); // device=16, fn=144
-    register_command(&SHARP_NUM_0, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4142"})); // device=16, fn=80
+    register_command(&SHARP_NUM_1, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"}, "TV 1")); // device=16, fn=128
+    register_command(&SHARP_NUM_2, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4102"}, "TV 2")); // device=16, fn=64
+    register_command(&SHARP_NUM_3, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4302"}, "TV 3")); // device=16, fn=192
+    register_command(&SHARP_NUM_4, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4082"}, "TV 4")); // device=16, fn=32
+    register_command(&SHARP_NUM_5, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4282"}, "TV 5")); // device=16, fn=160
+    register_command(&SHARP_NUM_6, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4182"}, "TV 6")); // device=16, fn=96
+    register_command(&SHARP_NUM_7, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4382"}, "TV 7")); // device=16, fn=224
+    register_command(&SHARP_NUM_8, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4042"}, "TV 8")); // device=16, fn=16
+    register_command(&SHARP_NUM_9, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4242"}, "TV 9")); // device=16, fn=144
+    register_command(&SHARP_NUM_0, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4142"}, "TV 0")); // device=16, fn=80
 
     // Channel, input
-    register_command(&SHARP_CHANNEL_UP, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4222"}));   // device=16, fn=136
-    register_command(&SHARP_CHANNEL_DOWN, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4122"})); // device=16, fn=72
+    register_command(&SHARP_CHANNEL_UP, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4222"}, "TV CH+"));   // device=16, fn=136
+    register_command(&SHARP_CHANNEL_DOWN, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4122"}, "TV CH-")); // device=16, fn=72
     register_command(&SHARP_INPUT_TV,
-                     makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4322"})); // device=16, fn=200 (input toggle)
+                     makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4322"}, "TV INPUT")); // device=16, fn=200 (input toggle)
 
     // Power (toggle only - Sharp has no separate on/off)
     register_command(&SHARP_POWER_ON,
                      makeCommandData(IR,
-                                     {std::to_string(IR_PROTOCOL_SHARP), "0x454a"})); // got these from harmony descrete off and on
-    register_command(&SHARP_POWER_OFF, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x474A"}));
+                                     {std::to_string(IR_PROTOCOL_SHARP), "0x454a"}, "TV ON")); // got these from harmony descrete off and on
+    register_command(&SHARP_POWER_OFF, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x474A"}, "TV OFF"));
 
     // Navigation
-    register_command(&SHARP_UP, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x43AA"}));     // device=16, fn=234
-    register_command(&SHARP_DOWN, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x406A"}));   // device=16, fn=26
-    register_command(&SHARP_LEFT, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x42BE"}));   // device=16, fn=175
-    register_command(&SHARP_RIGHT, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x41BE"}));  // device=16, fn=111
-    register_command(&SHARP_SELECT, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x43BE"})); // device=16, fn=239
-    register_command(&SHARP_EXIT, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x433E"}));   // device=16, fn=207
-    register_command(&SHARP_MENU, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4012"}));   // device=16, fn=4
+    register_command(&SHARP_UP, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x43AA"}, "TV UP"));     // device=16, fn=234
+    register_command(&SHARP_DOWN, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x406A"}, "TV DOWN"));   // device=16, fn=26
+    register_command(&SHARP_LEFT, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x42BE"}, "TV LEFT"));   // device=16, fn=175
+    register_command(&SHARP_RIGHT, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x41BE"}, "TV RIGHT"));  // device=16, fn=111
+    register_command(&SHARP_SELECT, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x43BE"}, "TV OK")); // device=16, fn=239
+    register_command(&SHARP_EXIT, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x433E"}, "TV EXIT"));   // device=16, fn=207
+    register_command(&SHARP_MENU, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4012"}, "TV MENU"));   // device=16, fn=4
 
     // No code found for these — capture with OMOTE IR receiver
-    register_command(&SHARP_GUIDE, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"}));  // PLACEHOLDER - unknown
-    register_command(&SHARP_REWIND, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"})); // PLACEHOLDER - unknown
-    register_command(&SHARP_PAUSE, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"}));  // PLACEHOLDER - unknown
+    register_command(&SHARP_GUIDE, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"}, "TV GUIDE"));  // PLACEHOLDER - unknown
+    register_command(&SHARP_REWIND, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"}, "TV REW")); // PLACEHOLDER - unknown
+    register_command(&SHARP_PAUSE, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"}, "TV PAUSE"));  // PLACEHOLDER - unknown
     register_command(&SHARP_FASTFORWARD,
-                     makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"}));              // PLACEHOLDER - unknown
-    register_command(&SHARP_PLAY, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"})); // PLACEHOLDER - unknown
+                     makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"}, "TV FF"));              // PLACEHOLDER - unknown
+    register_command(&SHARP_PLAY, makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"}, "TV PLAY")); // PLACEHOLDER - unknown
 
     // HDMI inputs — capture with OMOTE IR receiver
     register_command(&SHARP_INPUT_HDMI_1,
-                     makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"})); // PLACEHOLDER - unknown
+                     makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"}, "TV HDMI1")); // PLACEHOLDER - unknown
     register_command(&SHARP_INPUT_HDMI_2,
-                     makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"})); // PLACEHOLDER - unknown
+                     makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"}, "TV HDMI2")); // PLACEHOLDER - unknown
     register_command(&SHARP_INPUT_HDMI_3,
-                     makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"})); // PLACEHOLDER - unknown
+                     makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x4202"}, "TV HDMI3")); // PLACEHOLDER - unknown
     register_command(&SHARP_INPUT_HDMI_5,
-                     makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x44CA"})); // device=16, fn=50 (tentative)
+                     makeCommandData(IR, {std::to_string(IR_PROTOCOL_SHARP), "0x44CA"}, "TV HDMI5")); // device=16, fn=50 (tentative)
 }
