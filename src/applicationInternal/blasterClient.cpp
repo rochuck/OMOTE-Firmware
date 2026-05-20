@@ -23,8 +23,13 @@ constexpr const char* kKeyLastIp     = "last_ip";     // auto-cached on success
 
 constexpr const char* kMdnsService = "omote-blaster";
 constexpr uint16_t    kBlasterPort = 80;
-constexpr int         kStatusTimeoutMs = 150;
-constexpr int         kSendTimeoutMs   = 500;
+// Discovery runs off the main task, so a generous connect timeout is fine and
+// lets the handshake survive cross-VLAN routing latency (gateway hop + firewall
+// eval easily exceeds a few hundred ms on the first connect).
+constexpr int         kStatusTimeoutMs = 1500;
+// Send happens on the main flow (button press), so keep this tighter — but the
+// device is already known-reachable here, so the connect should be quick.
+constexpr int         kSendTimeoutMs   = 1000;
 constexpr unsigned long kRecheckIntervalMs = 60UL * 1000UL;
 
 bool s_enabled    = true;
@@ -33,6 +38,7 @@ String s_host;            // user override (host or IP) — empty if not set
 String s_resolved;        // working address (last_ip or mDNS-resolved)
 unsigned long s_next_recheck_ms = 0;
 volatile bool s_discover_in_flight = false;
+bool s_mdns_started = false;       // MDNS.begin() is global; only call it once
 
 // Single sink for state changes so the status-bar icon stays in sync.
 // Only notifies the GUI on actual transitions to keep the LVGL flush queue quiet.
@@ -70,6 +76,11 @@ bool handshake(const String& addr) {
     if (!http.begin(url)) {
         return false;
     }
+    // Tell the server to close the socket after responding. Without this, the
+    // default HTTP/1.1 keep-alive leaves connections lingering on the blaster's
+    // small lwip socket pool, which exhausts after a few requests and makes it
+    // stop responding.
+    http.setReuse(false);
     int code = http.GET();
     bool ok = false;
     if (code >= 200 && code < 300) {
@@ -86,9 +97,24 @@ bool handshake(const String& addr) {
     return ok;
 }
 
+// The ESP32 mDNS responder must be started before any queryService(), or it
+// silently returns 0. Other modules (OTA) may also start it, but only when
+// their feature is compiled in — so the blaster can't rely on that. begin()
+// is global and idempotent-unsafe, so we gate it on our own flag.
+void ensure_mdns() {
+    if (s_mdns_started) return;
+    if (MDNS.begin("OMOTE")) {
+        s_mdns_started = true;
+        omote_log_d("[blaster] mDNS responder started\r\n");
+    } else {
+        omote_log_w("[blaster] MDNS.begin() failed\r\n");
+    }
+}
+
 // mDNS browse for _omote-blaster._tcp. Returns the first IPv4 hit as a string,
 // or empty on miss.
 String mdns_resolve() {
+    ensure_mdns();
     int n = MDNS.queryService(kMdnsService, "tcp");
     if (n <= 0) return String();
     IPAddress ip = MDNS.IP(0);
@@ -253,6 +279,7 @@ bool blaster_send(int protocol,
     http.setTimeout(kSendTimeoutMs);
     http.setConnectTimeout(kSendTimeoutMs);
     if (!http.begin(url)) return false;
+    http.setReuse(false);  // close socket after response; see handshake() note
     http.addHeader("Content-Type", "application/json");
 
     int code = http.POST((uint8_t*)body, bw);

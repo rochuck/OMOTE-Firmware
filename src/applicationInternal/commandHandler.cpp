@@ -396,6 +396,12 @@ receiveWiFiConnected_cb(bool connected) {
 #if (ENABLE_WEBSOCKET == 1)
         init_websocket();
 #endif
+
+        // WiFi is now associated, so blaster discovery (mDNS browse + handshake)
+        // can actually succeed. Kick it off here rather than relying on the
+        // 60 s blaster_loop() re-check, which the device may never reach before
+        // it sleeps (~10 s idle timeout).
+        blaster_init();
     }
 }
 
