@@ -1,5 +1,6 @@
 #include "sleep_hal_esp32.h"
 #include "tft_hal_esp32.h"
+#include "applicationInternal/omote_log.h"
 #include <lvgl.h>
 
 extern char        queued_key;         // From your software callback
@@ -33,7 +34,8 @@ my_disp_flush(lv_disp_drv_t* disp, const lv_area_t* area, lv_color_t* color_p) {
 void
 my_touchpad_read(lv_indev_drv_t* indev_driver, lv_indev_data_t* data) {
     uint16_t x, y;
-    if (tft.getTouch(&x, &y)) {
+    bool     touched = tft.getTouch(&x, &y);
+    if (touched && x < SCR_WIDTH && y < SCR_HEIGHT) {
         data->state   = LV_INDEV_STATE_PR;
         data->point.x = x;
         data->point.y = y;
@@ -43,6 +45,17 @@ my_touchpad_read(lv_indev_drv_t* indev_driver, lv_indev_data_t* data) {
         // tft.drawFastHLine(0, y, SCR_WIDTH, TFT_RED);
         // tft.drawFastVLine(x, 0, SCR_HEIGHT, TFT_RED);
     } else {
+        // getTouch() can report a press with out-of-range coordinates (e.g. the
+        // 180deg-rotated bottom edge maps to y = -1, or a stuck/ghost touch).
+        // Drop it instead of injecting a phantom press, and log occasionally so
+        // a genuine stuck touch can be told apart from an edge artifact.
+        if (touched) {
+            static uint32_t rejected = 0;
+            if (rejected++ % 64 == 0) {
+                omote_log_w("touch: rejecting out-of-range point x=%d y=%d (count=%u)\r\n",
+                            (int) x, (int) y, (unsigned) rejected);
+            }
+        }
         data->state = LV_INDEV_STATE_REL;
     }
 }

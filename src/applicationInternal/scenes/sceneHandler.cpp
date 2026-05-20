@@ -133,17 +133,24 @@ void handleScene(uint16_t command, commandData commandData, std::string addition
       }
   
     }
+  }
 
+  // Switch the active scene name now — after the old scene's end sequence (which
+  // needs the old name) but before the new scene's start sequence runs. This way
+  // any IR the start sequence emits is tagged with the scene we are switching TO,
+  // not the one we are leaving. blaster_send() reads get_activeScene() per code.
+  gui_memoryOptimizer_setActiveSceneName(scene_name);
+
+  // Push the new scene to the blaster so its display reflects it before the
+  // commands arrive, and even when the scene change sends no IR (e.g. "Off").
+  // No-op if the blaster is absent.
+  blaster_notifyScene(scene_name);
+
+  if (callEndAndStartSequences) {
     // start new scene
     omote_log_d("scene: will call start sequence for scene %s\r\n", scene_name.c_str());
     scene_start_sequence_from_registry(scene_name);
   }
-
-  gui_memoryOptimizer_setActiveSceneName(scene_name);
-
-  // Push the new scene to the blaster so its display can reflect it even when
-  // the scene change sends no IR (e.g. "Off"). No-op if the blaster is absent.
-  blaster_notifyScene(scene_name);
 
   if (SceneLabel != NULL) {lv_label_set_text(SceneLabel, gui_memoryOptimizer_getActiveSceneName().c_str());}
 

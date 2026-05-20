@@ -41,12 +41,22 @@ unsigned long s_next_recheck_ms = 0;
 volatile bool s_discover_in_flight = false;
 bool s_mdns_started = false;       // MDNS.begin() is global; only call it once
 
+void notify_scene(const std::string& sceneName);  // fwd; defined below
+
 // Single sink for state changes so the status-bar icon stays in sync.
 // Only notifies the GUI on actual transitions to keep the LVGL flush queue quiet.
 void set_available(bool v) {
     bool changed = (v != s_available);
     s_available = v;
     if (changed) showBlasterAvailable(v);
+    // On a fresh connect (e.g. after the remote wakes and re-discovers the
+    // blaster), the blaster missed any scene changes that happened while we
+    // were asleep/disconnected. Push the active scene so its display catches
+    // up. Runs on the discovery task, same context that does the HTTP GET.
+    if (changed && v) {
+        std::string scene = get_activeScene();
+        if (!scene.empty()) notify_scene(scene);
+    }
 }
 
 void load_prefs() {
@@ -237,6 +247,24 @@ void discover_task(void*) {
     vTaskDelete(nullptr);
 }
 
+// Actual /scene POST. Lives in the namespace so set_available() can call it on
+// a fresh connect; the public blaster_notifyScene() delegates here. Assumes the
+// caller has already confirmed the blaster is available.
+void notify_scene(const std::string& sceneName) {
+    if (s_resolved.length() == 0) return;
+
+    String body = "{\"scene\":\"" + String(json_escape(sceneName).c_str()) + "\"}";
+    int code = post_json("/scene", body);
+    if (code >= 200 && code < 300) {
+        omote_log_d("[blaster] tx /scene scene=\"%s\" -> %d\r\n", sceneName.c_str(), code);
+        return;
+    }
+
+    omote_log_w("[blaster] scene notify -> %d; marking unavailable\r\n", code);
+    set_available(false);
+    s_next_recheck_ms = millis() + kRecheckIntervalMs;
+}
+
 void start_discover_async() {
     if (s_discover_in_flight) return;
     s_discover_in_flight = true;
@@ -324,18 +352,8 @@ bool blaster_send(int protocol,
 }
 
 void blaster_notifyScene(const std::string& sceneName) {
-    if (!s_enabled || !s_available || s_resolved.length() == 0) return;
-
-    String body = "{\"scene\":\"" + String(json_escape(sceneName).c_str()) + "\"}";
-    int code = post_json("/scene", body);
-    if (code >= 200 && code < 300) {
-        omote_log_d("[blaster] tx /scene scene=\"%s\" -> %d\r\n", sceneName.c_str(), code);
-        return;
-    }
-
-    omote_log_w("[blaster] scene notify -> %d; marking unavailable\r\n", code);
-    set_available(false);
-    s_next_recheck_ms = millis() + kRecheckIntervalMs;
+    if (!s_enabled || !s_available) return;
+    notify_scene(sceneName);
 }
 
 #endif  // ENABLE_WIFI_AND_MQTT

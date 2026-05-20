@@ -89,29 +89,60 @@ build_rpc_body(const String& player_id_json, const String& command_array_json) {
     return body;
 }
 
-// Replace common UTF-8 punctuation with ASCII equivalents — the Montserrat
-// subset built in doesn't include these glyphs, so they'd render as missing-
-// glyph boxes. Cheap byte-scan in place.
-//   E2 80 18/19  left/right single quote  -> '
-//   E2 80 1C/1D  left/right double quote  -> "
-//   E2 80 93/94  en-dash / em-dash        -> -
-//   E2 80 A6     horizontal ellipsis      -> ...
+// Map a single Unicode code point to a printable ASCII equivalent. The
+// Montserrat subset built in only covers ASCII, so anything else would render
+// as a missing-glyph box. Known punctuation and accented Latin letters are
+// transliterated; everything else falls back to '?' so a box never appears.
+static void
+append_ascii(std::string& out, uint32_t cp) {
+    if (cp < 0x80) { out += (char) cp; return; }
+    switch (cp) {
+        // Quotes / primes / accents that read as an apostrophe.
+        case 0x2018: case 0x2019: case 0x201A: case 0x201B:
+        case 0x02BC: case 0x2032: case 0x00B4: case 0x0060:
+            out += '\''; return;
+        case 0x201C: case 0x201D: case 0x201E: case 0x201F:
+        case 0x2033:
+            out += '"'; return;
+        // Hyphens / dashes / minus.
+        case 0x2010: case 0x2011: case 0x2012: case 0x2013:
+        case 0x2014: case 0x2015: case 0x2212:
+            out += '-'; return;
+        case 0x2026: out += "..."; return;            // ellipsis
+        case 0x00A0: case 0x2007: case 0x2009: case 0x202F:
+            out += ' '; return;                       // assorted spaces
+    }
+    // Latin-1 Supplement accented letters -> base ASCII letter.
+    static const char* const latin1 =  // U+00C0 .. U+00FF
+        "AAAAAAACEEEEIIIIDNOOOOOxOUUUUYTs"   // C0-DF (xD7 mult sign, DE Th->T, DF ss->s)
+        "aaaaaaaceeeeiiiidnooooo/ouuuuyty";  // E0-FF (xF7 div sign)
+    if (cp >= 0x00C0 && cp <= 0x00FF) { out += latin1[cp - 0x00C0]; return; }
+    out += '?';                                       // unknown -> printable
+}
+
+// Transliterate a UTF-8 string to printable ASCII (see append_ascii). Decodes
+// each code point, then maps it; malformed bytes are dropped.
 static std::string
 sanitize_text(const char* s) {
     std::string out;
     if (!s) return out;
     out.reserve(strlen(s));
     for (const unsigned char* p = (const unsigned char*) s; *p; ) {
-        if (p[0] == 0xE2 && p[1] == 0x80) {
-            switch (p[2]) {
-                case 0x18: case 0x19: out += '\'';  p += 3; continue;
-                case 0x1C: case 0x1D: out += '"';   p += 3; continue;
-                case 0x93: case 0x94: out += '-';   p += 3; continue;
-                case 0xA6:            out += "..."; p += 3; continue;
-                default: break;
-            }
+        unsigned char c = *p;
+        uint32_t cp; int len;
+        if      (c < 0x80)          { cp = c;        len = 1; }
+        else if ((c & 0xE0) == 0xC0){ cp = c & 0x1F; len = 2; }
+        else if ((c & 0xF0) == 0xE0){ cp = c & 0x0F; len = 3; }
+        else if ((c & 0xF8) == 0xF0){ cp = c & 0x07; len = 4; }
+        else                        { p += 1; continue; }   // stray continuation
+        bool ok = true;
+        for (int i = 1; i < len; i++) {
+            if ((p[i] & 0xC0) != 0x80) { ok = false; break; }
+            cp = (cp << 6) | (p[i] & 0x3F);
         }
-        out += (char) *p++;
+        if (!ok) { p += 1; continue; }
+        append_ascii(out, cp);
+        p += len;
     }
     return out;
 }
