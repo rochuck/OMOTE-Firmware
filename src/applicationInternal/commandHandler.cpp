@@ -189,6 +189,7 @@ void
 executeCommandWithData(uint16_t command, commandData commandData, std::string additionalPayload = "") {
     switch (commandData.commandHandler) {
     case IR: {
+        setLastActivityTimestamp();  // sending a code counts as activity — keep the remote awake
         omote_log_v("  generic IR, payloads %s\r\n", convertStringListToString(commandData.commandPayloads).c_str());
 
         // we received a comma separated list of strings
@@ -214,6 +215,7 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
 
 #if (ENABLE_WIFI_AND_MQTT == 1)
     case MQTT: {
+        setLastActivityTimestamp();
         auto        current = commandData.commandPayloads.begin();
         std::string topic   = *current;
         std::string payload;
@@ -232,6 +234,7 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
 
 #if (ENABLE_WIFI_AND_MQTT == 1)
     case WS: {
+        setLastActivityTimestamp();
         auto        current = commandData.commandPayloads.begin();
         std::string topic   = *current;
         std::string payload;
@@ -250,6 +253,7 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
 
 #if (ENABLE_KEYBOARD_BLE == 1)
     case BLE_KEYBOARD: {
+        setLastActivityTimestamp();
         omote_log_d("execute: will send BLE keyboard command '%u', payload '%s', additionalPayload '%s'\r\n",
                     command,
                     convertStringListToString(commandData.commandPayloads).c_str(),
@@ -296,6 +300,7 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
 
 #if (ENABLE_COMPANION == 1)
     case COMPANION: {
+        setLastActivityTimestamp();
         auto        it     = commandData.commandPayloads.begin();
         std::string action = *it++;
         std::string param  = (it != commandData.commandPayloads.end()) ? *it : "";
@@ -317,6 +322,7 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
 
 #if (ENABLE_KODI == 1)
     case KODI: {
+        setLastActivityTimestamp();
         // Payload format: { "method", "params_json" }
         // e.g. { "Input.Up", "{}" } or { "Input.ExecuteAction", "{\"action\":\"home\"}" }
         // additionalPayload, when non-empty, overrides the registered params (used for parameterized commands).
@@ -333,6 +339,7 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
 
 #if (ENABLE_LYRION == 1)
     case LYRION: {
+        setLastActivityTimestamp();
         // Payload format: a single JSON array string (the LMS command array, e.g. "[\"pause\"]")
         // — OR — an internal sentinel ("__lyrion_player_next__", etc.) that maps to a dedicated
         // HAL call instead of a JSON-RPC POST.
