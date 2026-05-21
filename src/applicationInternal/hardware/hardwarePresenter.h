@@ -279,6 +279,7 @@ struct LyrionStatus {
     int         volume     = -1;   // 0-100, negative = unknown
     bool        is_playing = false;
     bool        is_powered = false;
+    bool        is_muted   = false; // true when the player is muted
     bool        valid      = false;
 };
 void                init_lyrion_HAL(void);

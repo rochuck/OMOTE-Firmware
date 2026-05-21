@@ -43,7 +43,7 @@ struct PlayerEntry {
 };
 
 static bool                     s_inited        = false;
-static int                      s_request_id    = 1;
+static unsigned                 s_request_id    = 1; // unsigned: wraps cleanly, no signed-overflow UB
 static std::vector<PlayerEntry> s_players;
 static int                      s_current_index = -1;
 
@@ -83,7 +83,7 @@ build_url(const char* path) {
 // command array verbatim, e.g. "[\"pause\"]".
 static String
 build_rpc_body(const String& player_id_json, const String& command_array_json) {
-    String body = String("{\"id\":") + String(s_request_id++) +
+    String body = String("{\"id\":") + String((unsigned long) s_request_id++) +
                   ",\"method\":\"slim.request\",\"params\":[" +
                   player_id_json + "," + command_array_json + "]}";
     return body;
@@ -341,14 +341,18 @@ lyrion_pollStatus_HAL(LyrionStatus* out) {
     out->duration_s = result["duration"].as<float>(); // may be overwritten below
 
     // "mixer volume" is 0-100 (or negative when muted in some LMS versions —
-    // treat the magnitude as the level). Falls back to -1 when absent.
+    // treat the magnitude as the level and the sign as the mute flag). Falls
+    // back to -1 when absent. Some LMS builds also expose an explicit
+    // "mixer muting" flag; honor that too when present.
     JsonVariantConst vol = result["mixer volume"];
     if (!vol.isNull()) {
         int v = vol.as<int>();
-        if (v < 0) v = -v;
+        if (v < 0) { out->is_muted = true; v = -v; }
         if (v > 100) v = 100;
         out->volume = v;
     }
+    JsonVariantConst muting = result["mixer muting"];
+    if (!muting.isNull() && muting.as<int>() != 0) out->is_muted = true;
 
     JsonArrayConst pl = result["playlist_loop"].as<JsonArrayConst>();
     if (!pl.isNull() && pl.size() > 0) {

@@ -28,16 +28,35 @@ static lv_timer_t* s_poll_timer = nullptr;
 
 static std::string s_displayed_track_id;
 static std::string s_displayed_player;
+static std::string s_displayed_title;
+static std::string s_displayed_artist;
+static std::string s_displayed_album;
 static int         s_displayed_volume = -2; // -2 forces first paint
+static int         s_displayed_muted   = -1; // -1 forces first paint
 static int         s_displayed_powered = -1; // -1 forces first paint
 static int         s_displayed_playing = -1; // -1 forces first paint
+
+// Set a label's text only when it actually changed. The track text labels use
+// LV_LABEL_LONG_SCROLL_CIRCULAR, and lv_label_set_text restarts the scroll
+// animation on every call — so re-setting identical text every poll would keep
+// resetting a long title to its start and it would never scroll. Diffing here
+// keeps the scroll running and avoids needless relayout each poll.
+static void
+set_label_if_changed(lv_obj_t* label, const char* text, std::string& cache) {
+    if (cache == text) return;
+    cache = text;
+    lv_label_set_text(label, text);
+}
 
 static void
 format_mmss(int total_seconds, char* out, size_t out_len, bool negative) {
     if (total_seconds < 0) total_seconds = 0;
     int m = total_seconds / 60;
     int s = total_seconds % 60;
-    snprintf(out, out_len, "%s%d:%02d", negative ? "-" : "", m, s);
+    // Suppress the leading '-' at exactly zero so the remaining-time label reads
+    // "0:00" rather than "-0:00" when a track hits its end.
+    const char* sign = (negative && total_seconds > 0) ? "-" : "";
+    snprintf(out, out_len, "%s%d:%02d", sign, m, s);
 }
 
 static void
@@ -63,22 +82,39 @@ poll_cb(lv_timer_t* /*t*/) {
 
     // If we have no player yet (boot-time discovery ran before WiFi was up,
     // or LMS was unreachable), keep retrying discovery so the tab populates
-    // on its own once the network catches up.
+    // on its own once the network catches up. Each HAL call is a *blocking*
+    // HTTP request on the cooperative main loop, so don't retry every 500 ms
+    // poll — that would stack a failed poll and a failed discovery (each up to
+    // a 2 s connect timeout) back-to-back and freeze the whole remote while LMS
+    // is down. Back off to roughly one discovery attempt every 5 s instead.
+    static int discover_backoff = 0; // counts down polls until next retry
     if (!ok && st.player_name.empty()) {
-        if (lyrion_discoverPlayers_HAL()) {
-            ok = lyrion_pollStatus_HAL(&st);
+        if (discover_backoff <= 0) {
+            discover_backoff = 10; // 10 polls * 500 ms = ~5 s between retries
+            if (lyrion_discoverPlayers_HAL()) {
+                ok = lyrion_pollStatus_HAL(&st);
+            }
+        } else {
+            discover_backoff--;
         }
+    } else {
+        discover_backoff = 0; // healthy: retry immediately if we later lose the player
     }
 
     // player_name is filled even when the HTTP call fails (HAL caches the
     // selected player). Always reflect the current selection so CHUP/CHDOW
     // gives immediate UI feedback. Volume rides along on the same label.
-    int vol = (ok && st.valid) ? st.volume : -1;
-    if (st.player_name != s_displayed_player || vol != s_displayed_volume) {
+    int vol   = (ok && st.valid) ? st.volume : -1;
+    int muted = (ok && st.valid) ? (st.is_muted ? 1 : 0) : 0;
+    if (st.player_name != s_displayed_player || vol != s_displayed_volume || muted != s_displayed_muted) {
         s_displayed_player = st.player_name;
         s_displayed_volume = vol;
+        s_displayed_muted  = muted;
         const char* name = st.player_name.empty() ? "" : st.player_name.c_str();
-        if (vol >= 0) {
+        if (vol >= 0 && muted) {
+            // Muted: show the mute glyph instead of a misleading level.
+            lv_label_set_text_fmt(s_player_label, "%s - " LV_SYMBOL_MUTE, name);
+        } else if (vol >= 0) {
             lv_label_set_text_fmt(s_player_label, "%s - " LV_SYMBOL_VOLUME_MID " %d%%", name, vol);
         } else {
             lv_label_set_text(s_player_label, name);
@@ -109,9 +145,9 @@ poll_cb(lv_timer_t* /*t*/) {
     }
 
     if (!ok || !st.valid) {
-        lv_label_set_text(s_title_label,  "");
-        lv_label_set_text(s_artist_label, "");
-        lv_label_set_text(s_album_label,  "");
+        set_label_if_changed(s_title_label,  "", s_displayed_title);
+        set_label_if_changed(s_artist_label, "", s_displayed_artist);
+        set_label_if_changed(s_album_label,  "", s_displayed_album);
         lv_label_set_text(s_time_elapsed, "");
         lv_label_set_text(s_time_remain,  "");
         lv_bar_set_value(s_progress_bar, 0, LV_ANIM_OFF);
@@ -119,9 +155,9 @@ poll_cb(lv_timer_t* /*t*/) {
         return;
     }
 
-    lv_label_set_text(s_title_label,  st.title.empty()  ? "" : st.title.c_str());
-    lv_label_set_text(s_artist_label, st.artist.c_str());
-    lv_label_set_text(s_album_label,  st.album.c_str());
+    set_label_if_changed(s_title_label,  st.title.c_str(),  s_displayed_title);
+    set_label_if_changed(s_artist_label, st.artist.c_str(), s_displayed_artist);
+    set_label_if_changed(s_album_label,  st.album.c_str(),  s_displayed_album);
     // Compose an art cache key from coverid + title + artist. coverid alone is
     // stable across tracks within an album (correct: same art) but is *also*
     // often stable across songs in a stream where art does change — so we
@@ -267,7 +303,11 @@ create_tab_content_lyrion_nowplaying(lv_obj_t* tab) {
     // newly-attached player shows up without rebooting.
     s_displayed_track_id.clear();
     s_displayed_player.clear();
+    s_displayed_title.clear();
+    s_displayed_artist.clear();
+    s_displayed_album.clear();
     s_displayed_volume  = -2;
+    s_displayed_muted   = -1;
     s_displayed_powered = -1;
     s_displayed_playing = -1;
     lyrion_discoverPlayers_HAL();
@@ -299,7 +339,11 @@ notify_tab_before_delete_lyrion_nowplaying(void) {
     s_time_remain  = nullptr;
     s_displayed_track_id.clear();
     s_displayed_player.clear();
+    s_displayed_title.clear();
+    s_displayed_artist.clear();
+    s_displayed_album.clear();
     s_displayed_volume  = -2;
+    s_displayed_muted   = -1;
     s_displayed_powered = -1;
     s_displayed_playing = -1;
     lyrion_releaseArt_HAL();

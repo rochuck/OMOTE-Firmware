@@ -35,7 +35,7 @@ struct PlayerEntry {
 };
 
 static bool                     s_inited        = false;
-static int                      s_request_id    = 1;
+static unsigned                 s_request_id    = 1; // unsigned: wraps cleanly, no signed-overflow UB
 static std::vector<PlayerEntry> s_players;
 static int                      s_current_index = -1;
 
@@ -108,7 +108,7 @@ quote_json_string(const std::string& s) {
 static std::string
 build_rpc_body(const std::string& player_id_json, const std::string& command_array_json) {
     char id_str[24];
-    snprintf(id_str, sizeof(id_str), "%d", s_request_id++);
+    snprintf(id_str, sizeof(id_str), "%u", s_request_id++);
     std::string body = "{\"id\":";
     body += id_str;
     body += ",\"method\":\"slim.request\",\"params\":[";
@@ -422,10 +422,12 @@ lyrion_pollStatus_HAL(LyrionStatus* out) {
     cJSON* mv = cJSON_GetObjectItem(result, "mixer volume");
     if (mv && cJSON_IsNumber(mv)) {
         int v = mv->valueint;
-        if (v < 0) v = -v;
+        if (v < 0) { out->is_muted = true; v = -v; }
         if (v > 100) v = 100;
         out->volume = v;
     }
+    cJSON* muting = cJSON_GetObjectItem(result, "mixer muting");
+    if (muting && cJSON_IsNumber(muting) && muting->valueint != 0) out->is_muted = true;
 
     cJSON* pl = cJSON_GetObjectItem(result, "playlist_loop");
     if (pl && cJSON_IsArray(pl) && cJSON_GetArraySize(pl) > 0) {
