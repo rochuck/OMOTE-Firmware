@@ -8,5 +8,4 @@ extern uint16_t SCENE_KODI;
 extern uint16_t SCENE_KODI_FORCE;
 
 extern std::string scene_name_kodi;
-void register_scene_kodi_commands(void);
 void register_scene_kodi(void);

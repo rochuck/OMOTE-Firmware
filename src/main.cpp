@@ -85,7 +85,6 @@
 #include "scenes/scene__default.h"
 #include "scenes/scene_allOff.h"
 #include "scenes/scene_appleTV.h"
-#include "scenes/scene_chromecast.h"
 #include "scenes/scene_kodi.h"
 #include "scenes/scene_kodi_BT.h"
 #include "scenes/scene_lyrion.h"
@@ -215,7 +214,6 @@ main(int argc, char* argv[]) {
     // register the scenes and their key_commands_*
     register_scene_defaultKeys();
     register_scene_appleTV();
-    register_scene_chromecast();
     register_scene_kodi();
     register_scene_kodi_BT();
     register_scene_lyrion();

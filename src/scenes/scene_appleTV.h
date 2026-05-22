@@ -8,5 +8,4 @@ extern uint16_t SCENE_APPLETV;
 extern uint16_t SCENE_APPLETV_FORCE;
 
 extern std::string scene_name_appleTV;
-void register_scene_appleTV_commands(void);
 void register_scene_appleTV(void);
