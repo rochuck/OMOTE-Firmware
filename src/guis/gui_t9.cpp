@@ -11,12 +11,35 @@
 #include "applicationInternal/gui/guiMemoryOptimizer.h"
 #include "applicationInternal/scenes/sceneHandler.h"
 #include "scenes/scene_kodi_BT.h"
+#if (ENABLE_LYRION == 1)
+#include "scenes/scene_lyrion.h"
+#include "guis/gui_lyrion_browse.h"
+#endif
 #if (ENABLE_KODI == 1)
 #include "devices/mediaPlayer/device_kodi/device_kodi.h"
 #endif
 #if (ENABLE_KEYBOARD_BLE == 1)
 #include "devices/keyboard/device_keyboard_ble/device_keyboard_ble.h"
 #endif
+
+// Hand-authored single-glyph font (U+2423 OPEN BOX "␣") chained as a fallback
+// so the space symbol on the "0" key renders even though the built-in
+// Montserrat subset lacks it. Defined in src/fonts/lv_font_space_box.c.
+LV_FONT_DECLARE(lv_font_space_box);
+
+// Montserrat 16 with the space-box font as a fallback. Built once on first use
+// (the built-in font is const, so we copy it into RAM and add the fallback).
+static const lv_font_t*
+t9_font(void) {
+    static lv_font_t font;
+    static bool      inited = false;
+    if (!inited) {
+        font          = lv_font_montserrat_16;
+        font.fallback = &lv_font_space_box;
+        inited        = true;
+    }
+    return &font;
+}
 
 // Multi-tap (classic phone T9) state. After COMMIT_MS of inactivity, or when a
 // different key is pressed, the in-progress letter is committed and a new tap
@@ -28,6 +51,10 @@ static const char* const T9_LETTERS[9] = {
     // index 0 = digit 1 (no letters), 1 = digit 2 ABC, ..., 8 = digit 9 WXYZ
     "1", "abc", "def", "ghi", "jkl", "mno", "pqrs", "tuv", "wxyz",
 };
+
+// The "0" key cycles space then '0' (classic phone behavior). Stored here so the
+// multi-tap logic for idx 10 mirrors the letter keys.
+static const char* const T9_ZERO = " 0";
 
 static lv_obj_t*   s_ta          = nullptr;
 static lv_timer_t* s_commitTimer = nullptr;
@@ -131,9 +158,17 @@ virtualT9_event_cb(lv_event_t* e) {
         return;
     }
 
-    if (idx == 10) {
-        commit_pending();
-        lv_textarea_add_char(s_ta, '0');
+    if (idx == 10) { // "0" key: multi-tap cycles space then '0'
+        if (s_lastKey == idx) {
+            s_cycleIdx = (s_cycleIdx + 1) % strlen(T9_ZERO);
+            replace_last_char(T9_ZERO[s_cycleIdx]);
+        } else {
+            commit_pending();
+            s_lastKey  = idx;
+            s_cycleIdx = 0;
+            lv_textarea_add_char(s_ta, T9_ZERO[0]);
+        }
+        start_commit_timer();
         return;
     }
 
@@ -151,6 +186,14 @@ virtualT9_event_cb(lv_event_t* e) {
 #if (ENABLE_KEYBOARD_BLE == 1)
             if (gui_memoryOptimizer_getActiveSceneName() == scene_name_kodi_BT) {
                 executeCommand(KEYBOARD_BLE_SENDSTRING, std::string(text));
+                sent = true;
+            }
+#endif
+#if (ENABLE_LYRION == 1)
+            if (!sent && gui_memoryOptimizer_getActiveSceneName() == scene_name_lyrion) {
+                // Run a Lyrion library search and show grouped results on the
+                // Browse tab (this also switches the active tab).
+                gui_lyrion_browse_runSearch(std::string(text));
                 sent = true;
             }
 #endif
@@ -183,7 +226,7 @@ create_tab_content_t9(lv_obj_t* tab) {
                                    "8\nTUV",
                                    "9\nWXYZ",
                                    LV_SYMBOL_BACKSPACE,
-                                   "0",
+                                   "0\n\xE2\x90\xA3",
                                    LV_SYMBOL_OK,
                                    NULL};
     static lv_coord_t  col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
@@ -223,7 +266,7 @@ create_tab_content_t9(lv_obj_t* tab) {
         lv_label_set_text(buttonLabel, kb_map[i]);
         lv_obj_set_style_text_align(buttonLabel, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_user_data(obj, (void*) (intptr_t) i);
-        lv_obj_set_style_text_font(buttonLabel, &lv_font_montserrat_16, LV_PART_MAIN);
+        lv_obj_set_style_text_font(buttonLabel, t9_font(), LV_PART_MAIN);
         lv_obj_center(buttonLabel);
     }
     lv_obj_add_event_cb(cont, virtualT9_event_cb, LV_EVENT_CLICKED, NULL);

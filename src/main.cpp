@@ -68,6 +68,7 @@
 #include "guis/gui_kodi_BT.h"
 #if (ENABLE_LYRION == 1)
 #include "guis/gui_lyrion_nowplaying.h"
+#include "guis/gui_lyrion_browse.h"
 #endif
 #include "guis/gui_numpad.h"
 #include "guis/gui_sceneSelection.h"
@@ -187,6 +188,7 @@ main(int argc, char* argv[]) {
     register_gui_kodi_BT();
 #if (ENABLE_LYRION == 1)
     register_gui_lyrion_nowplaying();
+    register_gui_lyrion_browse();
 #endif
 
 #if (ENABLE_KEYBOARD_BLE == 1)

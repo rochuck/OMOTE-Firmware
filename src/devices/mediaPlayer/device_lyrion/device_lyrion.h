@@ -20,6 +20,13 @@ extern uint16_t LYRION_MUTE_TOGGLE;
 extern uint16_t LYRION_PLAYER_NEXT;
 extern uint16_t LYRION_PLAYER_PREV;
 
+// Browse-screen navigation (handled directly in commandHandler — drive the
+// browse GUI's d-pad navigation, no JSON-RPC sent)
+extern uint16_t LYRION_BROWSE_UP;
+extern uint16_t LYRION_BROWSE_DOWN;
+extern uint16_t LYRION_BROWSE_SELECT;
+extern uint16_t LYRION_BROWSE_BACK;
+
 void register_device_lyrion(void);
 
 #endif // ENABLE_LYRION

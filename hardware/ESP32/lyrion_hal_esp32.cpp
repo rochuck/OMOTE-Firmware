@@ -37,6 +37,10 @@ static const int LYRION_ART_PX = 200;
 // PSRAM.
 static const size_t LYRION_ART_MAX_BYTES = 160 * 1024;
 
+// Read timeout for app/radio plugin browses. These make LMS fetch menus from
+// the internet before replying, so they need far longer than a local query.
+static const int LYRION_APP_BROWSE_TIMEOUT_MS = 10000;
+
 struct PlayerEntry {
     std::string id;   // MAC address, e.g. "aa:bb:cc:dd:ee:ff"
     std::string name; // human-readable
@@ -162,15 +166,19 @@ quote_json_string(const std::string& s) {
 }
 
 // POST a JSON-RPC body and return the response body (empty on failure).
+// `timeout_ms` is the read timeout: keep it short (2 s) for local queries so a
+// down server can't freeze the UI, but allow more for app/plugin browses, which
+// make LMS fetch menus from the internet (Radio Paradise et al.) before it
+// replies — a 2 s read timeout drops those mid-response (HTTP error -5).
 static String
-post_rpc(const String& body) {
+post_rpc(const String& body, int timeout_ms = 2000) {
     if (WiFi.status() != WL_CONNECTED) {
         omote_log_e("lyrion: WiFi not connected, dropping request\r\n");
         return String();
     }
     HTTPClient http;
     http.setConnectTimeout(2000);
-    http.setTimeout(2000);
+    http.setTimeout(timeout_ms);
     http.begin(build_url("/jsonrpc.js"));
     http.addHeader("Content-Type", "application/json");
     omote_log_v("lyrion: POST body=%s\r\n", body.c_str());
@@ -505,6 +513,378 @@ lyrion_releaseArt_HAL(void) {
         s_art_track_id.clear();
         memset(&s_art_dsc, 0, sizeof(s_art_dsc));
     }
+}
+
+// --- Library browse ---------------------------------------------------------
+
+// Read a field that LMS may return as either a JSON string or number into a
+// std::string (favorites item ids look like "f1a2.0"; playlist ids are ints).
+static std::string
+browse_id_to_string(JsonVariantConst v) {
+    const char* s = v.as<const char*>();
+    if (s && s[0]) return std::string(s);
+    if (!v.isNull() && v.is<long long>()) {
+        char buf[24];
+        snprintf(buf, sizeof(buf), "%lld", v.as<long long>());
+        return std::string(buf);
+    }
+    return std::string();
+}
+
+bool
+lyrion_browseFavorites_HAL(const std::string& item_id, std::vector<LyrionBrowseItem>* out) {
+    if (!out || !s_inited) return false;
+    out->clear();
+    // Server-level read (empty player id). Append item_id only when drilling in.
+    String cmd = F("[\"favorites\",\"items\",\"0\",\"200\",\"want_url:1\"");
+    if (!item_id.empty()) {
+        String esc = quote_json_string(item_id);            // "..." escaped
+        cmd += ",\"item_id:";
+        cmd += esc.substring(1, esc.length() - 1);          // inner text, no quotes
+        cmd += "\"";
+    }
+    cmd += "]";
+    String body = build_rpc_body(F("\"\""), cmd);
+    String resp = post_rpc(body);
+    if (resp.isEmpty()) return false;
+
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, resp);
+    if (err) {
+        omote_log_e("lyrion: favorites JSON parse failed: %s\r\n", err.c_str());
+        return false;
+    }
+    JsonArrayConst loop = doc["result"]["loop_loop"].as<JsonArrayConst>();
+    if (loop.isNull()) {
+        omote_log_w("lyrion: favorites response missing loop_loop\r\n");
+        return true; // empty list, not an error
+    }
+    for (JsonVariantConst it : loop) {
+        LyrionBrowseItem e;
+        const char* name = it["name"].as<const char*>();
+        e.title    = sanitize_text(name ? name : "");
+        e.id       = browse_id_to_string(it["id"]);
+        e.hasitems = (it["hasitems"].as<int>() != 0);
+        e.isaudio  = (it["isaudio"].as<int>() != 0);
+        e.type     = e.hasitems ? LIT_FOLDER : LIT_FAVORITE;
+        if (!e.title.empty()) out->push_back(e);
+    }
+    return true;
+}
+
+bool
+lyrion_browsePlaylists_HAL(std::vector<LyrionBrowseItem>* out) {
+    if (!out || !s_inited) return false;
+    out->clear();
+    String body = build_rpc_body(F("\"\""), F("[\"playlists\",\"0\",\"200\"]"));
+    String resp = post_rpc(body);
+    if (resp.isEmpty()) return false;
+
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, resp);
+    if (err) {
+        omote_log_e("lyrion: playlists JSON parse failed: %s\r\n", err.c_str());
+        return false;
+    }
+    JsonArrayConst loop = doc["result"]["playlists_loop"].as<JsonArrayConst>();
+    if (loop.isNull()) {
+        omote_log_w("lyrion: playlists response missing playlists_loop\r\n");
+        return true;
+    }
+    for (JsonVariantConst it : loop) {
+        LyrionBrowseItem e;
+        const char* name = it["playlist"].as<const char*>();
+        e.title   = sanitize_text(name ? name : "");
+        e.id      = browse_id_to_string(it["id"]);
+        e.isaudio = true; // playlists load+play as a leaf
+        e.type    = LIT_PLAYLIST;
+        if (!e.title.empty()) out->push_back(e);
+    }
+    return true;
+}
+
+bool
+lyrion_playFavorite_HAL(const std::string& item_id) {
+    String esc = quote_json_string(item_id); // "..." with " and \ escaped
+    String cmd = String("[\"favorites\",\"playlist\",\"play\",\"item_id:") +
+                 esc.substring(1, esc.length() - 1) + "\"]";
+    return lyrion_sendCommand_HAL(std::string(cmd.c_str()));
+}
+
+bool
+lyrion_playPlaylist_HAL(const std::string& playlist_id) {
+    String esc = quote_json_string(playlist_id);
+    String cmd = String("[\"playlistcontrol\",\"cmd:load\",\"playlist_id:") +
+                 esc.substring(1, esc.length() - 1) + "\"]";
+    return lyrion_sendCommand_HAL(std::string(cmd.c_str()));
+}
+
+bool
+lyrion_playUrl_HAL(const std::string& url, const std::string& title) {
+    String cmd = String("[\"playlist\",\"play\",") +
+                 quote_json_string(url) + "," + quote_json_string(title) + "]";
+    return lyrion_sendCommand_HAL(std::string(cmd.c_str()));
+}
+
+// --- Full library browse + search ------------------------------------------
+
+// Append a `,"key:value"` token to a command array when value is non-empty.
+// The value is JSON-escaped (quote_json_string) and stripped of its quotes.
+static void
+append_tag(String& cmd, const char* key, const std::string& value) {
+    if (value.empty()) return;
+    String esc = quote_json_string(value);
+    cmd += ",\"";
+    cmd += key;
+    cmd += ":";
+    cmd += esc.substring(1, esc.length() - 1);
+    cmd += "\"";
+}
+
+// Shared list fetch: POST `cmd`, parse `result[loop_key]` into `out`, read
+// `result.count` into *total. `name_key` is the per-item display field; ids
+// come from per-item "id". `type` is assigned to every produced item.
+static bool
+browse_list_common(const String& cmd, const char* loop_key, const char* name_key,
+                   LyrionItemType type, std::vector<LyrionBrowseItem>* out, int* total) {
+    if (!out || !s_inited) return false;
+    out->clear();
+    if (total) *total = 0;
+    String body = build_rpc_body(F("\"\""), cmd);
+    String resp = post_rpc(body);
+    if (resp.isEmpty()) return false;
+
+    JsonDocument doc;
+    DeserializationError err = deserializeJson(doc, resp);
+    if (err) {
+        omote_log_e("lyrion: %s JSON parse failed: %s\r\n", loop_key, err.c_str());
+        return false;
+    }
+    JsonVariantConst result = doc["result"];
+    if (total) *total = result["count"].as<int>();
+    JsonArrayConst loop = result[loop_key].as<JsonArrayConst>();
+    if (loop.isNull()) return true; // empty list, not an error
+    for (JsonVariantConst it : loop) {
+        LyrionBrowseItem e;
+        const char* name = it[name_key].as<const char*>();
+        e.title = sanitize_text(name ? name : "");
+        e.id    = browse_id_to_string(it["id"]);
+        e.type  = type;
+        if (!e.title.empty()) out->push_back(e);
+    }
+    return true;
+}
+
+bool
+lyrion_browseArtists_HAL(const std::string& genre_id, const std::string& search,
+                         int start, int count, std::vector<LyrionBrowseItem>* out, int* total) {
+    String cmd = String("[\"artists\",\"") + start + "\",\"" + count + "\"";
+    append_tag(cmd, "genre_id", genre_id);
+    append_tag(cmd, "search", search);
+    cmd += "]";
+    return browse_list_common(cmd, "artists_loop", "artist", LIT_ARTIST, out, total);
+}
+
+bool
+lyrion_browseAlbums_HAL(const std::string& artist_id, const std::string& genre_id,
+                        const std::string& search, int start, int count,
+                        std::vector<LyrionBrowseItem>* out, int* total) {
+    String cmd = String("[\"albums\",\"") + start + "\",\"" + count + "\",\"tags:l\",\"sort:album\"";
+    append_tag(cmd, "artist_id", artist_id);
+    append_tag(cmd, "genre_id", genre_id);
+    append_tag(cmd, "search", search);
+    cmd += "]";
+    return browse_list_common(cmd, "albums_loop", "album", LIT_ALBUM, out, total);
+}
+
+bool
+lyrion_browseGenres_HAL(int start, int count, std::vector<LyrionBrowseItem>* out, int* total) {
+    String cmd = String("[\"genres\",\"") + start + "\",\"" + count + "\"]";
+    return browse_list_common(cmd, "genres_loop", "genre", LIT_GENRE, out, total);
+}
+
+bool
+lyrion_browseTracks_HAL(const std::string& album_id, const std::string& artist_id,
+                        const std::string& search, int start, int count,
+                        std::vector<LyrionBrowseItem>* out, int* total) {
+    String cmd = String("[\"titles\",\"") + start + "\",\"" + count + "\",\"tags:t\",\"sort:tracknum\"";
+    append_tag(cmd, "album_id", album_id);
+    append_tag(cmd, "artist_id", artist_id);
+    append_tag(cmd, "search", search);
+    cmd += "]";
+    return browse_list_common(cmd, "titles_loop", "title", LIT_TRACK, out, total);
+}
+
+bool
+lyrion_searchCounts_HAL(const std::string& term, int* artists, int* albums, int* tracks) {
+    if (!s_inited) return false;
+    if (artists) *artists = 0;
+    if (albums) *albums = 0;
+    if (tracks) *tracks = 0;
+    String cmd = F("[\"search\",\"0\",\"1\"");
+    append_tag(cmd, "term", term);
+    cmd += "]";
+    String resp = post_rpc(build_rpc_body(F("\"\""), cmd));
+    if (resp.isEmpty()) return false;
+
+    JsonDocument doc;
+    if (deserializeJson(doc, resp)) return false;
+    JsonVariantConst result = doc["result"];
+    if (artists) *artists = result["contributors_count"].as<int>();
+    if (albums) *albums = result["albums_count"].as<int>();
+    if (tracks) *tracks = result["tracks_count"].as<int>();
+    return true;
+}
+
+bool
+lyrion_playSelector_HAL(const std::string& selector) {
+    String esc = quote_json_string(selector);
+    String cmd = String("[\"playlistcontrol\",\"cmd:load\",") + esc + "]";
+    return lyrion_sendCommand_HAL(std::string(cmd.c_str()));
+}
+
+// --- LMS apps / radio plugins (XMLBrowser/OPML interface) -------------------
+
+// Read a plugin's query command from an apps/radios entry. Usually a plain
+// string ("radioparadise"); some versions wrap it in a single-element array.
+static std::string
+read_app_cmd(JsonVariantConst entry) {
+    JsonVariantConst cmd = entry["cmd"];
+    if (cmd.is<JsonArrayConst>()) {
+        JsonArrayConst a = cmd.as<JsonArrayConst>();
+        if (a.size() > 0 && a[0].as<const char*>()) return a[0].as<const char*>();
+        return std::string();
+    }
+    const char* s = cmd.as<const char*>();
+    return s ? std::string(s) : std::string();
+}
+
+// JSON for the current player id, or "" when none is selected. App/radio
+// plugins (Radio Paradise et al.) reference the client in their XMLBrowser
+// handlers, so their "items"/"playlist play" queries must carry the player id —
+// a server-level ("") request makes the plugin handler throw and LMS drops the
+// connection (seen as HTTP error -5).
+static String
+current_player_id_json(void) {
+    if (s_current_index >= 0 && s_current_index < (int) s_players.size()) {
+        return quote_json_string(s_players[s_current_index].id);
+    }
+    return String("\"\"");
+}
+
+// Append entries from one apps/radios loop into `out`, skipping cmds already
+// present (radios and apps overlap on some servers).
+static void
+collect_apps(JsonVariantConst result, const char* loop_key, std::vector<LyrionBrowseItem>* out) {
+    JsonArrayConst loop = result[loop_key].as<JsonArrayConst>();
+    if (loop.isNull()) return;
+    for (JsonVariantConst it : loop) {
+        LyrionBrowseItem e;
+        e.id   = read_app_cmd(it);
+        if (e.id.empty()) continue;
+        bool dup = false;
+        for (const auto& x : *out) if (x.id == e.id) { dup = true; break; }
+        if (dup) continue;
+        const char* nm = it["name"].as<const char*>();
+        e.title = sanitize_text(nm ? nm : e.id.c_str());
+        e.type  = LIT_APP;
+        if (!e.title.empty()) out->push_back(e);
+    }
+}
+
+bool
+lyrion_browseApps_HAL(std::vector<LyrionBrowseItem>* out) {
+    if (!out || !s_inited) return false;
+    out->clear();
+    // "radios" lists internet-radio plugins (Radio Paradise et al.); "apps"
+    // lists the rest (Spotify, podcasts, ...). Query both and merge.
+    static const char* const queries[] = {"radios", "apps"};
+    static const char* const loop_keys[] = {"radioss_loop", "appss_loop"};
+    bool any = false;
+    for (int i = 0; i < 2; ++i) {
+        String cmd  = String("[\"") + queries[i] + "\",\"0\",\"200\"]";
+        String resp = post_rpc(build_rpc_body(current_player_id_json(), cmd), LYRION_APP_BROWSE_TIMEOUT_MS);
+        if (resp.isEmpty()) continue;
+        JsonDocument doc;
+        if (deserializeJson(doc, resp)) {
+            omote_log_e("lyrion: %s JSON parse failed\r\n", queries[i]);
+            continue;
+        }
+        collect_apps(doc["result"], loop_keys[i], out);
+        any = true;
+    }
+    return any;
+}
+
+bool
+lyrion_browseAppItems_HAL(const std::string& app_cmd, const std::string& item_id,
+                          std::vector<LyrionBrowseItem>* out) {
+    if (!out || !s_inited || app_cmd.empty()) return false;
+    out->clear();
+    String esc = quote_json_string(app_cmd);
+    String cmd = String("[") + esc + ",\"items\",\"0\",\"200\"";
+    if (!item_id.empty()) {
+        String iesc = quote_json_string(item_id);
+        cmd += ",\"item_id:";
+        cmd += iesc.substring(1, iesc.length() - 1);
+        cmd += "\"";
+    }
+    cmd += "]";
+    String resp = post_rpc(build_rpc_body(current_player_id_json(), cmd), LYRION_APP_BROWSE_TIMEOUT_MS);
+    if (resp.isEmpty()) return false;
+
+    JsonDocument doc;
+    if (deserializeJson(doc, resp)) {
+        omote_log_e("lyrion: app items JSON parse failed\r\n");
+        return false;
+    }
+    JsonVariantConst result = doc["result"];
+    // XMLBrowser plugins normally answer under "item_loop"; a few mirror the
+    // favorites shape ("loop_loop"). Accept either.
+    JsonArrayConst loop = result["item_loop"].as<JsonArrayConst>();
+    if (loop.isNull()) loop = result["loop_loop"].as<JsonArrayConst>();
+    if (loop.isNull()) {
+        // Dump the result object's keys so the real loop name is visible in the
+        // log (different plugins/LMS versions vary).
+        omote_log_w("lyrion: app items missing item_loop (cmd='%s' item_id='%s'); result keys:\r\n",
+                    app_cmd.c_str(), item_id.c_str());
+        JsonObjectConst obj = result.as<JsonObjectConst>();
+        if (!obj.isNull()) {
+            for (JsonPairConst kv : obj) omote_log_w("lyrion:   '%s'\r\n", kv.key().c_str());
+        } else {
+            omote_log_w("lyrion: result is not an object; resp[0..200]=%.200s\r\n", resp.c_str());
+        }
+        return true; // empty menu, not an error
+    }
+    for (JsonVariantConst it : loop) {
+        LyrionBrowseItem e;
+        const char* nm = it["name"].as<const char*>();
+        if (!nm) nm = it["title"].as<const char*>();
+        e.title    = sanitize_text(nm ? nm : "");
+        e.id       = browse_id_to_string(it["id"]);
+        e.hasitems = (it["hasitems"].as<int>() != 0);
+        e.isaudio  = (it["isaudio"].as<int>() != 0);
+        // Drillable nodes and bare links both drill via "items"; only audio
+        // leaves play. Default non-audio to a folder so it stays navigable.
+        e.type = (e.isaudio && !e.hasitems) ? LIT_APP_AUDIO : LIT_APP_FOLDER;
+        if (!e.title.empty() && !e.id.empty()) out->push_back(e);
+    }
+    return true;
+}
+
+bool
+lyrion_playAppItem_HAL(const std::string& app_cmd, const std::string& item_id) {
+    if (!s_inited || app_cmd.empty() || item_id.empty()) return false;
+    if (s_current_index < 0 || s_current_index >= (int) s_players.size()) return false;
+    String aesc = quote_json_string(app_cmd);
+    String iesc = quote_json_string(item_id);
+    String cmd = String("[") + aesc + ",\"playlist\",\"play\",\"item_id:" +
+                 iesc.substring(1, iesc.length() - 1) + "\"]";
+    // Like the browse calls, the plugin may resolve the stream upstream before
+    // replying — use the longer timeout, not lyrion_sendCommand_HAL's 2 s.
+    String pid  = quote_json_string(s_players[s_current_index].id);
+    String resp = post_rpc(build_rpc_body(pid, cmd), LYRION_APP_BROWSE_TIMEOUT_MS);
+    return !resp.isEmpty();
 }
 
 #endif // ENABLE_LYRION

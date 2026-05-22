@@ -268,6 +268,7 @@ kodi_sendRpc_HAL(const std::string& method, const std::string& params_json);
 #if (ENABLE_LYRION == 1)
 #include <lvgl.h>
 #include <string>
+#include <vector>
 struct LyrionStatus {
     std::string player_name;
     std::string title;
@@ -282,6 +283,34 @@ struct LyrionStatus {
     bool        is_muted   = false; // true when the player is muted
     bool        valid      = false;
 };
+// What a browse row represents — drives the GUI's select behaviour so it does
+// not need to special-case each level.
+enum LyrionItemType {
+    LIT_FOLDER = 0, // generic drill (root / library menu / favorites folder / search group)
+    LIT_ARTIST,     // drill -> albums by this artist
+    LIT_ALBUM,      // drill -> tracks on this album
+    LIT_GENRE,      // drill -> artists in this genre
+    LIT_TRACK,      // play this track
+    LIT_PLAYLIST,   // load this playlist
+    LIT_FAVORITE,   // play this favorite (audio leaf)
+    LIT_URL,        // play this url (Radio Paradise)
+    LIT_PLAY_ALL,   // play the current container (album / artist)
+    LIT_APP,        // an LMS app/radio plugin root (id = its query cmd, e.g. "radioparadise")
+    LIT_APP_FOLDER, // a drillable menu node inside an app (drill via app_cmd + id)
+    LIT_APP_AUDIO,  // a playable leaf inside an app (play via app_cmd + id)
+};
+// One row in a browse list. `id` is a favorites item_id, playlist_id, or
+// library id (artist/album/genre/track); `url` is set only for hardcoded
+// direct-stream entries (Radio Paradise). `hasitems`/`isaudio` are still set
+// from the favorites response; `type` is the GUI's source of truth.
+struct LyrionBrowseItem {
+    std::string    title; // display text (already sanitized to ASCII)
+    std::string    id;    // favorites item_id / playlist_id / library id
+    std::string    url;   // direct stream URL for hardcoded entries
+    bool           hasitems = false;
+    bool           isaudio  = false;
+    LyrionItemType type     = LIT_FOLDER;
+};
 void                init_lyrion_HAL(void);
 bool                lyrion_discoverPlayers_HAL(void);
 bool                lyrion_cyclePlayer_HAL(int direction);
@@ -291,4 +320,37 @@ bool                lyrion_powerOffAll_HAL(void);
 bool                lyrion_pollStatus_HAL(LyrionStatus* out);
 const lv_img_dsc_t* lyrion_fetchArt_HAL(const std::string& track_id);
 void                lyrion_releaseArt_HAL(void);
+// Library browse (Favorites + Playlists). List calls fill `out`; play calls
+// target the currently-selected player.
+bool                lyrion_browseFavorites_HAL(const std::string& item_id, std::vector<LyrionBrowseItem>* out);
+bool                lyrion_browsePlaylists_HAL(std::vector<LyrionBrowseItem>* out);
+bool                lyrion_playFavorite_HAL(const std::string& item_id);
+bool                lyrion_playPlaylist_HAL(const std::string& playlist_id);
+bool                lyrion_playUrl_HAL(const std::string& url, const std::string& title);
+// Full library browse + search. List calls fill `out` (paginated via
+// start/count) and report the total match count in `*total`. Optional filter
+// args are applied only when non-empty. Play uses an LMS playlistcontrol
+// selector ("album_id:5", "artist_id:9", "track_id:42") on the current player.
+bool                lyrion_browseArtists_HAL(const std::string& genre_id, const std::string& search,
+                                             int start, int count, std::vector<LyrionBrowseItem>* out, int* total);
+bool                lyrion_browseAlbums_HAL(const std::string& artist_id, const std::string& genre_id,
+                                            const std::string& search, int start, int count,
+                                            std::vector<LyrionBrowseItem>* out, int* total);
+bool                lyrion_browseGenres_HAL(int start, int count, std::vector<LyrionBrowseItem>* out, int* total);
+bool                lyrion_browseTracks_HAL(const std::string& album_id, const std::string& artist_id,
+                                            const std::string& search, int start, int count,
+                                            std::vector<LyrionBrowseItem>* out, int* total);
+bool                lyrion_searchCounts_HAL(const std::string& term, int* artists, int* albums, int* tracks);
+bool                lyrion_playSelector_HAL(const std::string& selector);
+// LMS apps / radio plugins (the XMLBrowser/OPML "items" interface used by the
+// web UI and mobile apps). Launching a stream this way runs it through its
+// plugin, so per-track metadata + cover art arrive — unlike playing a bare
+// stream URL. browseApps lists the installed app/radio plugins (id = each
+// plugin's query cmd). browseAppItems drills one app's menu: `app_cmd` is that
+// query cmd; `item_id` is empty for the app's top menu, or a node id to drill
+// in. playAppItem plays a leaf on the current player.
+bool                lyrion_browseApps_HAL(std::vector<LyrionBrowseItem>* out);
+bool                lyrion_browseAppItems_HAL(const std::string& app_cmd, const std::string& item_id,
+                                              std::vector<LyrionBrowseItem>* out);
+bool                lyrion_playAppItem_HAL(const std::string& app_cmd, const std::string& item_id);
 #endif

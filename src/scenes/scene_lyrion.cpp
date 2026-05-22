@@ -11,6 +11,8 @@
 #endif
 // guis
 #include "guis/gui_lyrion_nowplaying.h"
+#include "guis/gui_lyrion_browse.h"
+#include "guis/gui_t9.h" // on-screen keypad reused for library search
 
 uint16_t SCENE_LYRION;       //"Scene_lyrion"
 uint16_t SCENE_LYRION_FORCE; //"Scene_lyrion_force"
@@ -64,10 +66,13 @@ scene_end_sequence_lyrion(void) {
 }
 
 std::string scene_name_lyrion = "Lyrion";
-// Single-tab gui_list today. To add a library-browse tab later, register a new
-// GUI (e.g. gui_lyrion_browse) and append its tabName here:
-//   t_gui_list scene_lyrion_gui_list = {tabName_lyrion_nowplaying, tabName_lyrion_browse};
-t_gui_list scene_lyrion_gui_list = {tabName_lyrion_nowplaying};
+// Three tabs (order must match the LYRION_GUI_* enum in gui_lyrion_browse.h):
+//   0 now-playing, 1 d-pad library browser, 2 T9 keypad (library search input).
+// The browse GUI owns the d-pad via its own key map (active only while focused),
+// so the scene-level d-pad stays unbound here. Three tabs sit within the memory
+// optimizer's resident-tab window, so the browse statics survive the round-trip
+// to the T9 tab and back.
+t_gui_list scene_lyrion_gui_list = {tabName_lyrion_nowplaying, tabName_lyrion_browse, tabName_t9};
 
 void
 register_scene_lyrion(void) {

@@ -17,6 +17,11 @@ uint16_t LYRION_MUTE_TOGGLE;
 uint16_t LYRION_PLAYER_NEXT;
 uint16_t LYRION_PLAYER_PREV;
 
+uint16_t LYRION_BROWSE_UP;
+uint16_t LYRION_BROWSE_DOWN;
+uint16_t LYRION_BROWSE_SELECT;
+uint16_t LYRION_BROWSE_BACK;
+
 // LMS command-array payloads (slim.request format).
 // Internal sentinels (__lyrion_*) are intercepted in commandHandler.cpp and
 // dispatched to dedicated HAL functions instead of being POSTed.
@@ -34,6 +39,11 @@ register_device_lyrion(void) {
 
     register_command(&LYRION_PLAYER_NEXT,   makeCommandData(LYRION, {"__lyrion_player_next__"}));
     register_command(&LYRION_PLAYER_PREV,   makeCommandData(LYRION, {"__lyrion_player_prev__"}));
+
+    register_command(&LYRION_BROWSE_UP,     makeCommandData(LYRION, {"__lyrion_browse_up__"}));
+    register_command(&LYRION_BROWSE_DOWN,   makeCommandData(LYRION, {"__lyrion_browse_down__"}));
+    register_command(&LYRION_BROWSE_SELECT, makeCommandData(LYRION, {"__lyrion_browse_select__"}));
+    register_command(&LYRION_BROWSE_BACK,   makeCommandData(LYRION, {"__lyrion_browse_back__"}));
 }
 
 #endif // ENABLE_LYRION

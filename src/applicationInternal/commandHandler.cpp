@@ -15,6 +15,10 @@
 #include "guis/gui_irReceiver.h"
 // show received BLE connection messages
 #include "guis/gui_BLEpairing.h"
+// drive the Lyrion browse screen's d-pad navigation
+#if (ENABLE_LYRION == 1)
+#include "guis/gui_lyrion_browse.h"
+#endif
 
 // to me this seems hacky, but include the home automation device here
 // so we can subscribe to the correct web socket messages
@@ -351,6 +355,14 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
             lyrion_cyclePlayer_HAL(-1);
         } else if (payload == "__lyrion_power_toggle__") {
             lyrion_powerToggle_HAL();
+        } else if (payload == "__lyrion_browse_up__") {
+            gui_lyrion_browse_nav('u');
+        } else if (payload == "__lyrion_browse_down__") {
+            gui_lyrion_browse_nav('d');
+        } else if (payload == "__lyrion_browse_select__") {
+            gui_lyrion_browse_select();
+        } else if (payload == "__lyrion_browse_back__") {
+            gui_lyrion_browse_back();
         } else {
             bool ok = lyrion_sendCommand_HAL(payload);
             if (!ok) { omote_log_e("lyrion: command '%s' failed\r\n", payload.c_str()); }
