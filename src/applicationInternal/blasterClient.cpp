@@ -2,6 +2,7 @@
 
 #if (ENABLE_WIFI_AND_MQTT == 1) && defined(ARDUINO)
 
+#include "applicationInternal/blasterStateSync.h"
 #include "applicationInternal/gui/guiBase.h"
 #include "applicationInternal/hardware/hardwarePresenter.h"
 #include "applicationInternal/omote_log.h"
@@ -41,8 +42,6 @@ unsigned long s_next_recheck_ms = 0;
 volatile bool s_discover_in_flight = false;
 bool s_mdns_started = false;       // MDNS.begin() is global; only call it once
 
-void notify_scene(const std::string& sceneName);  // fwd; defined below
-
 // Single sink for state changes so the status-bar icon stays in sync.
 // Only notifies the GUI on actual transitions to keep the LVGL flush queue quiet.
 void set_available(bool v) {
@@ -54,8 +53,10 @@ void set_available(bool v) {
     // were asleep/disconnected. Push the active scene so its display catches
     // up. Runs on the discovery task, same context that does the HTTP GET.
     if (changed && v) {
-        std::string scene = get_activeScene();
-        if (!scene.empty()) notify_scene(scene);
+        // Hand off to the state-sync module. On the first transition after boot
+        // it will GET /state and reconcile the GUI; on subsequent reconnects it
+        // just re-POSTs current state so a rebooted blaster catches up.
+        blasterStateSync_onBlasterAvailable();
     }
 }
 
@@ -222,22 +223,6 @@ std::string json_escape(const std::string& s) {
     return o;
 }
 
-// POST a JSON body to a path on the resolved blaster. Returns the HTTP status
-// code, or <0 on transport failure. Caller decides what a failure means.
-int post_json(const char* path, const String& body) {
-    if (s_resolved.length() == 0) return -1;
-    String url = "http://" + s_resolved + ":" + String(kBlasterPort) + path;
-    HTTPClient http;
-    http.setTimeout(kSendTimeoutMs);
-    http.setConnectTimeout(kSendTimeoutMs);
-    if (!http.begin(url)) return -1;
-    http.setReuse(false);  // close socket after response; see handshake() note
-    http.addHeader("Content-Type", "application/json");
-    int code = http.POST((uint8_t*)body.c_str(), body.length());
-    http.end();
-    return code;
-}
-
 // Runs try_discover() off the main task so the synchronous MDNS.queryService
 // (~3s timeout) doesn't freeze gui_loop().
 void discover_task(void*) {
@@ -245,24 +230,6 @@ void discover_task(void*) {
     s_next_recheck_ms = millis() + kRecheckIntervalMs;
     s_discover_in_flight = false;
     vTaskDelete(nullptr);
-}
-
-// Actual /scene POST. Lives in the namespace so set_available() can call it on
-// a fresh connect; the public blaster_notifyScene() delegates here. Assumes the
-// caller has already confirmed the blaster is available.
-void notify_scene(const std::string& sceneName) {
-    if (s_resolved.length() == 0) return;
-
-    String body = "{\"scene\":\"" + String(json_escape(sceneName).c_str()) + "\"}";
-    int code = post_json("/scene", body);
-    if (code >= 200 && code < 300) {
-        omote_log_d("[blaster] tx /scene scene=\"%s\" -> %d\r\n", sceneName.c_str(), code);
-        return;
-    }
-
-    omote_log_w("[blaster] scene notify -> %d; marking unavailable\r\n", code);
-    set_available(false);
-    s_next_recheck_ms = millis() + kRecheckIntervalMs;
 }
 
 void start_discover_async() {
@@ -338,7 +305,7 @@ bool blaster_send(int protocol,
     }
     body += "}";
 
-    int code = post_json("/send", body);
+    int code = blaster_postJson("/send", body.c_str());
     if (code >= 200 && code < 300) {
         omote_log_d("[blaster] tx /send scene=\"%s\" cmd=\"%s\" proto=%d data=%s -> %d\r\n",
                     scene.c_str(), commandName.c_str(), protocol, data.c_str(), code);
@@ -351,9 +318,38 @@ bool blaster_send(int protocol,
     return false;
 }
 
-void blaster_notifyScene(const std::string& sceneName) {
-    if (!s_enabled || !s_available) return;
-    notify_scene(sceneName);
+// Public HTTP helpers used by blasterStateSync. Both go to the resolved
+// blaster address on the same port and timeouts as the existing send path;
+// the sync module pre-checks blaster_isAvailable() before calling.
+int blaster_postJson(const char* path, const char* body) {
+    if (s_resolved.length() == 0) return -1;
+    String url = "http://" + s_resolved + ":" + String(kBlasterPort) + path;
+    HTTPClient http;
+    http.setTimeout(kSendTimeoutMs);
+    http.setConnectTimeout(kSendTimeoutMs);
+    if (!http.begin(url)) return -1;
+    http.setReuse(false);  // close socket; see handshake() note
+    http.addHeader("Content-Type", "application/json");
+    int code = http.POST((uint8_t*)body, strlen(body));
+    http.end();
+    return code;
+}
+
+int blaster_getJson(const char* path, String& outBody) {
+    outBody = String();
+    if (s_resolved.length() == 0) return -1;
+    String url = "http://" + s_resolved + ":" + String(kBlasterPort) + path;
+    HTTPClient http;
+    http.setTimeout(kSendTimeoutMs);
+    http.setConnectTimeout(kSendTimeoutMs);
+    if (!http.begin(url)) return -1;
+    http.setReuse(false);
+    int code = http.GET();
+    if (code >= 200 && code < 300) {
+        outBody = http.getString();
+    }
+    http.end();
+    return code;
 }
 
 #endif  // ENABLE_WIFI_AND_MQTT

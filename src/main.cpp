@@ -21,6 +21,7 @@
 // register devices and their commands
 //   special
 #include "applicationInternal/blasterClient.h"
+#include "applicationInternal/blasterStateSync.h"
 #include "applicationInternal/commandHandler.h"
 #include "devices/misc/device_specialCommands.h"
 //   keyboards
@@ -327,6 +328,7 @@ loop(unsigned long* pIMUTaskTimer, unsigned long* pUpdateStatusTimer) {
 #if (ENABLE_WIFI_AND_MQTT == 1)
     mqtt_loop();
     blaster_loop();   // periodic re-discovery when blaster is unreachable
+    blasterStateSync_loop();  // POST dirty state and apply pending boot-sync fetch
 #endif
 #if (ENABLE_OTA == 1)
     ota_loop();

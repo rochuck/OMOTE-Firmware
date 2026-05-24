@@ -77,7 +77,7 @@ All requests are JSON over HTTP to port 80 on the blaster.
 }
 ```
 
-**`POST /scene`** — push the active scene when it changes, even when no IR is sent (e.g. switching to "Off"). Sent automatically from the scene-change path so the blaster's display stays current:
+**`POST /scene`** — push the active scene when it changes (legacy; superseded by `/state` below, but kept for older blaster builds):
 
 ```json
 { "scene": "Off" }
@@ -86,6 +86,39 @@ All requests are JSON over HTTP to port 80 on the blaster.
 **`GET /status`** — health + display state: `{ ok, service, version, uptime, rssi, ip, scene, lastCommand, lastCommandAgo }`.
 
 `scene` and `name` are optional and additive — older blaster builds simply ignore them. They exist to drive a (planned) status display on the blaster showing the current scene, last command, IP, and uptime.
+
+### GUI-state sync (multi-remote)
+
+The blaster also stores `(scene, guiName, guiList, lastIndex)` in RAM and serves as the source of truth for which screen a remote should show. With two remotes sharing one blaster, whichever remote you pick up reconciles to the blaster's last-known screen on wake. Lives in [applicationInternal/blasterStateSync.cpp](src/applicationInternal/blasterStateSync.cpp).
+
+**Boot flow:**
+
+1. Restore from local NVS and show that screen immediately (no perceptible delay).
+2. Once the blaster handshake succeeds, `GET /state`.
+3. If the response is `valid:true` and any field differs from local state, navigate the GUI to match — no IR is fired (the A/V hardware is already in that state, that's why the blaster reported it).
+4. If `valid:false` (blaster was cold-booted), POST current state — the blaster adopts it.
+5. If the user changes scene/screen during the gap between boot and the fetch result, **the user wins** — the apply is skipped and their change has already been POSTed.
+
+**Steady-state:** every setter call in [gui/guiMemoryOptimizer.cpp](src/applicationInternal/gui/guiMemoryOptimizer.cpp) calls `blasterStateSync_postCurrent()`, which coalesces rapid bursts (~250 ms) and POSTs the full state. The next remote to wake up reads it.
+
+**`POST /state`** — push full GUI state:
+
+```json
+{ "scene": "Apple TV", "guiName": "Apple TV", "guiList": 1, "lastIndex": 0 }
+```
+
+`guiList` is `0` (main list) or `1` (scene-specific list). Last-write-wins — no version/CAS.
+
+**`GET /state`** — read the blaster's authoritative state:
+
+```jsonc
+// valid blaster (something has been POSTed since blaster boot)
+{ "valid": true, "scene": "Apple TV", "guiName": "Apple TV", "guiList": 1, "lastIndex": 0 }
+// cold blaster
+{ "valid": false }
+```
+
+The blaster keeps this in RAM only — a blaster reboot wipes it. Acceptable because the next remote to wake republishes its state, restoring the snapshot. There is no continuous polling; reconciliation only happens once on remote boot/wake, since only one remote is in use at a time.
 
 ### Human-readable command names
 

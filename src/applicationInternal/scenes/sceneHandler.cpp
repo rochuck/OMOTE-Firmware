@@ -139,12 +139,9 @@ void handleScene(uint16_t command, commandData commandData, std::string addition
   // needs the old name) but before the new scene's start sequence runs. This way
   // any IR the start sequence emits is tagged with the scene we are switching TO,
   // not the one we are leaving. blaster_send() reads get_activeScene() per code.
+  // The setter also notifies blasterStateSync, which POSTs the full state to
+  // the blaster so its display catches up even when no IR is sent (e.g. "Off").
   gui_memoryOptimizer_setActiveSceneName(scene_name);
-
-  // Push the new scene to the blaster so its display reflects it before the
-  // commands arrive, and even when the scene change sends no IR (e.g. "Off").
-  // No-op if the blaster is absent.
-  blaster_notifyScene(scene_name);
 
   if (callEndAndStartSequences) {
     // start new scene

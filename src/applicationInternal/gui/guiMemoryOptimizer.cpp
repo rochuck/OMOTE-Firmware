@@ -1,4 +1,5 @@
 #include <lvgl.h>
+#include "applicationInternal/blasterStateSync.h"
 #include "applicationInternal/gui/guiBase.h"
 #include "applicationInternal/gui/guiMemoryOptimizer.h"
 #include "applicationInternal/gui/guiRegistry.h"
@@ -38,6 +39,7 @@ std::string gui_memoryOptimizer_getActiveSceneName() {
 void gui_memoryOptimizer_setActiveSceneName(std::string aSceneName) {
   gui_state.activeScene_internalDontUse = aSceneName;
   set_activeScene(aSceneName);
+  blasterStateSync_postCurrent();
 }
 std::string gui_memoryOptimizer_getActiveGUIname() {
   gui_state.activeGUIname_internalDontUse = get_activeGUIname();
@@ -46,6 +48,7 @@ std::string gui_memoryOptimizer_getActiveGUIname() {
 void gui_memoryOptimizer_setActiveGUIname(std::string aGUIname) {
   gui_state.activeGUIname_internalDontUse = aGUIname;
   set_activeGUIname(aGUIname);
+  blasterStateSync_postCurrent();
 }
 GUIlists gui_memoryOptimizer_getActiveGUIlist() {
   gui_state.activeGUIlist_internalDontUse = (GUIlists)get_activeGUIlist();
@@ -54,6 +57,7 @@ GUIlists gui_memoryOptimizer_getActiveGUIlist() {
 void gui_memoryOptimizer_setActiveGUIlist(GUIlists aGUIlist) {
   gui_state.activeGUIlist_internalDontUse = aGUIlist;
   set_activeGUIlist(aGUIlist);
+  blasterStateSync_postCurrent();
 }
 int gui_memoryOptimizer_getLastActiveGUIlistIndex() {
   gui_state.last_active_gui_list_index_internalDontUse = get_lastActiveGUIlistIndex();
@@ -62,6 +66,7 @@ int gui_memoryOptimizer_getLastActiveGUIlistIndex() {
 void gui_memoryOptimizer_setLastActiveGUIlistIndex(int aGUIlistIndex) {
   gui_state.last_active_gui_list_index_internalDontUse = aGUIlistIndex;
   set_lastActiveGUIlistIndex(aGUIlistIndex);
+  blasterStateSync_postCurrent();
 }
 
 int gui_memoryOptimizer_getActiveTabID() {

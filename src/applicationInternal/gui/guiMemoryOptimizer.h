@@ -25,4 +25,6 @@ std::string gui_memoryOptimizer_getActiveGUIname();
 void gui_memoryOptimizer_setActiveGUIname(std::string aGUIname);
 GUIlists gui_memoryOptimizer_getActiveGUIlist();
 void gui_memoryOptimizer_setActiveGUIlist(GUIlists aGUIlist);
+int gui_memoryOptimizer_getLastActiveGUIlistIndex();
+void gui_memoryOptimizer_setLastActiveGUIlistIndex(int aGUIlistIndex);
 

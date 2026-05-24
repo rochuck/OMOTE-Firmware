@@ -5,6 +5,8 @@
 
 #if (ENABLE_WIFI_AND_MQTT == 1) && defined(ARDUINO)
 
+#include <Arduino.h>  // for String, used by blaster_getJson
+
 // Call once after WiFi has associated. Tries the cached IP first
 // (fast path on every wake), falls back to mDNS browse on miss.
 // Safe to call again on WiFi reconnect / periodic re-check.
@@ -27,10 +29,11 @@ bool blaster_send(int protocol,
                   std::string additionalPayload,
                   std::string commandName = "");
 
-// Push the active scene name to the blaster so its display can show it even
-// when no IR is sent (e.g. switching to "Off"). No-op when the blaster isn't
-// available. Call from the scene-change chokepoint.
-void blaster_notifyScene(const std::string& sceneName);
+// Generic HTTP helpers against the resolved blaster, exposed for the state-sync
+// module. Both return the HTTP status code, or <0 on transport failure.
+// Caller must keep body alive for the duration of the call.
+int  blaster_postJson(const char* path, const char* body);
+int  blaster_getJson (const char* path, String& outBody);
 
 #else
 
@@ -39,6 +42,4 @@ inline void blaster_loop() {}
 inline bool blaster_isEnabled()   { return false; }
 inline bool blaster_isAvailable() { return false; }
 inline bool blaster_send(int, std::list<std::string>, std::string, std::string = "") { return false; }
-inline void blaster_notifyScene(const std::string&) {}
-
 #endif
