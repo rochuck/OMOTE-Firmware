@@ -23,35 +23,30 @@ std::map<char, uint16_t>    key_commands_long_kodi;
 void
 scene_setKeys_kodi() {
     key_repeatModes_kodi = {
-
         {KEY_STOP,  SHORT            },    {KEY_REWI,  SHORT_REPEATED   },    {KEY_PLAY,  SHORT            },    {KEY_FORW,  SHORT_REPEATED   },
         {KEY_CONF,  SHORT            },                                                                          {KEY_INFO,  SHORT            },
                                                              {KEY_UP,    SHORT_REPEATED   },
                           {KEY_LEFT,  SHORT_REPEATED   },    {KEY_OK,    SHORT            },    {KEY_RIGHT, SHORT_REPEATED   },
                                                              {KEY_DOWN,  SHORT_REPEATED   },
-                                                                                                                 {KEY_SRC,   SHORT            },
+        {KEY_BACK,  SHORT            },                                                                          {KEY_SRC,   SHORT            },
                                                                                                                  {KEY_CHUP,  SHORT            },
                                                                                                                  {KEY_CHDOW, SHORT            },
-
     };
 
 #if (ENABLE_KODI == 1)
     key_commands_short_kodi = {
-
-        {KEY_STOP,  KODI_STOP                },    {KEY_REWI,  KODI_REWIND              },    {KEY_PLAY,  KODI_PLAY_PAUSE          },    {KEY_FORW,  KODI_FAST_FORWARD        },
-        {KEY_CONF,  KODI_CONTEXT_MENU        },                                                                                            {KEY_INFO,  KODI_INFO                },
-                                                                  {KEY_UP,    KODI_UP                  },
-                            {KEY_LEFT,  KODI_LEFT              },    {KEY_OK,    KODI_SELECT              },    {KEY_RIGHT, KODI_RIGHT             },
-                                                                  {KEY_DOWN,  KODI_DOWN                },
-                                                                                                                                            {KEY_SRC,   KODI_HOME                },
-                                                                                                                                            {KEY_CHUP,  KODI_VOLUME_UP           },
-                                                                                                                                            {KEY_CHDOW, KODI_VOLUME_DOWN         },
-
+        {KEY_STOP,  KODI_STOP        },    {KEY_REWI,  KODI_REWIND      },    {KEY_PLAY,  KODI_PLAY_PAUSE  },    {KEY_FORW,  KODI_FAST_FORWARD},
+        {KEY_CONF,  KODI_CONTEXT_MENU},                                                                          {KEY_INFO,  KODI_INFO        },
+                                                             {KEY_UP,    KODI_UP          },
+                          {KEY_LEFT,  KODI_LEFT        },    {KEY_OK,    KODI_SELECT      },    {KEY_RIGHT, KODI_RIGHT       },
+                                                             {KEY_DOWN,  KODI_DOWN        },
+        {KEY_BACK,  KODI_BACK        },                                                                          {KEY_SRC,   KODI_HOME        },
+                                                                                                                 {KEY_CHUP,  KODI_STEP_FORWARD},
+                                                                                                                 {KEY_CHDOW, KODI_STEP_BACK   },
     };
 
     key_commands_long_kodi = {
-        {KEY_OK,   KODI_BACK },
-        {KEY_STOP, KODI_MUTE_TOGGLE },
+        {KEY_STOP,  KODI_MUTE_TOGGLE },
     };
 #endif
 }

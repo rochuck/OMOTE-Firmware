@@ -25,7 +25,6 @@ std::map<char, uint16_t>    key_commands_long_appleTV;
 void
 scene_setKeys_appleTV() {
     key_repeatModes_appleTV = {
-
         {KEY_STOP,  SHORT_REPEATED   },    {KEY_REWI,  SHORT            },    {KEY_PLAY,  SHORT            },    {KEY_FORW,  SHORT_REPEATED   },
         {KEY_CONF,  SHORT            },                                                                          {KEY_INFO,  SHORT            },
                                                              {KEY_UP,    SHORT_REPEATED   },
@@ -34,20 +33,17 @@ scene_setKeys_appleTV() {
                                                                                                                  {KEY_SRC,   SHORT            },
                                                                                                                  {KEY_CHUP,  SHORT            },
                                                                                                                  {KEY_CHDOW, SHORT            },
-
     };
 
     key_commands_short_appleTV = {
-
         {KEY_STOP,  APPLETV_PAUSE             },    {KEY_REWI,  APPLETV_10_SECOND_BACK    },    {KEY_PLAY,  APPLETV_PLAY              },    {KEY_FORW,  APPLETV_10_SECOND_FOREWARD},
-        {KEY_CONF,  SHARP_GUIDE               },                                                                                              {KEY_INFO,  APPLETV_MENU              },
-                                                                    {KEY_UP,    APPLETV_UP                },
-                            {KEY_LEFT,  APPLETV_LEFT              },    {KEY_OK,    APPLETV_OK                },    {KEY_RIGHT, APPLETV_RIGHT             },
-                                                                    {KEY_DOWN,  APPLETV_DOWN              },
-                                                                                                                                              {KEY_SRC,   APPLETV_HOME              },
-                                                                                                                                              {KEY_CHUP,  SHARP_CHANNEL_UP          },
-                                                                                                                                              {KEY_CHDOW, SHARP_CHANNEL_DOWN        },
-
+        {KEY_CONF,  SHARP_GUIDE               },                                                                                            {KEY_INFO,  APPLETV_MENU              },
+                                                                          {KEY_UP,    APPLETV_UP                },
+                              {KEY_LEFT,  APPLETV_LEFT              },    {KEY_OK,    APPLETV_OK                },    {KEY_RIGHT, APPLETV_RIGHT             },
+                                                                          {KEY_DOWN,  APPLETV_DOWN              },
+                                                                                                                                            {KEY_SRC,   APPLETV_HOME              },
+                                                                                                                                            {KEY_CHUP,  SHARP_CHANNEL_UP          },
+                                                                                                                                            {KEY_CHDOW, SHARP_CHANNEL_DOWN        },
     };
 
     key_commands_long_appleTV = {

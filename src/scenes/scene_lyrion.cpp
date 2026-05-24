@@ -24,7 +24,6 @@ std::map<char, uint16_t>    key_commands_long_lyrion;
 void
 scene_setKeys_lyrion() {
     key_repeatModes_lyrion = {
-
         {KEY_STOP,  SHORTorLONG      },    {KEY_REWI,  SHORT_REPEATED   },    {KEY_PLAY,  SHORT            },    {KEY_FORW,  SHORT_REPEATED   },
         {KEY_VOLUP, SHORT_REPEATED   },                                                                          {KEY_MUTE,  SHORT            },
         {KEY_VOLDO, SHORT_REPEATED   },
@@ -32,22 +31,19 @@ scene_setKeys_lyrion() {
         // keymap won't need a tab-aware override when browse is added.
                                                                                                                  {KEY_CHUP,  SHORT            },
                                                                                                                  {KEY_CHDOW, SHORT            },
-
     };
 
 #if (ENABLE_LYRION == 1)
     key_commands_short_lyrion = {
-
-        {KEY_STOP,  LYRION_STOP            },    {KEY_REWI,  LYRION_PREV         },    {KEY_PLAY,  LYRION_PLAY_PAUSE   },    {KEY_FORW,  LYRION_NEXT         },
-        {KEY_VOLUP, LYRION_VOLUME_UP       },                                                                                  {KEY_MUTE,  LYRION_MUTE_TOGGLE  },
-        {KEY_VOLDO, LYRION_VOLUME_DOWN     },
-                                                                                                                                 {KEY_CHUP,  LYRION_PLAYER_NEXT  },
-                                                                                                                                 {KEY_CHDOW, LYRION_PLAYER_PREV  },
-
+        {KEY_STOP,  LYRION_STOP       },    {KEY_REWI,  LYRION_PREV       },    {KEY_PLAY,  LYRION_PLAY_PAUSE },    {KEY_FORW,  LYRION_NEXT       },
+        {KEY_VOLUP, LYRION_VOLUME_UP  },                                                                            {KEY_MUTE,  LYRION_MUTE_TOGGLE},
+        {KEY_VOLDO, LYRION_VOLUME_DOWN},
+                                                                                                                    {KEY_CHUP,  LYRION_PLAYER_NEXT},
+                                                                                                                    {KEY_CHDOW, LYRION_PLAYER_PREV},
     };
 
     key_commands_long_lyrion = {
-        {KEY_STOP, LYRION_POWER_TOGGLE },
+        {KEY_STOP,  LYRION_POWER_TOGGLE},
     };
 #endif
 }
