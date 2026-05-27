@@ -23,6 +23,12 @@ namespace {
 // Coalesce a burst of setter calls (scene change typically triggers
 // guiList + guiName + lastIndex updates in quick succession) into one POST.
 constexpr unsigned long kPostCoalesceMs = 250;
+// Periodic re-fetch cadence once we're past the boot sync. 2 s is snappy
+// enough that a button press on another remote shows up here within a couple
+// seconds, while keeping HTTP chatter on the LAN modest.
+constexpr unsigned long kPollIntervalMs = 2000;
+
+unsigned long s_next_poll_ms = 0;
 
 // Boot-sync one-shot: true after the first GET /state attempt has been
 // kicked off; prevents re-syncing on every WiFi blip thereafter.
@@ -161,7 +167,7 @@ void fetch_task(void*) {
                 s_apply_guiList = guiList;
                 s_apply_lastIdx = lastIdx;
                 s_apply_valid   = true;
-                omote_log_i("[blasterSync] fetched: scene=\"%s\" gui=\"%s\" list=%d idx=%d\r\n",
+                omote_log_d("[blasterSync] fetched: scene=\"%s\" gui=\"%s\" list=%d idx=%d\r\n",
                             scene.c_str(), guiName.c_str(), guiList, lastIdx);
             } else {
                 omote_log_w("[blasterSync] /state response missing fields: %s\r\n", body.c_str());
@@ -187,11 +193,28 @@ void fetch_task(void*) {
 
 // -- apply on main thread -------------------------------------------------
 
-void apply_remote_state() {
-    // Look up the GUI's index in its list before touching anything, so we
-    // can bail cleanly if the remote sent a GUI name this remote doesn't
-    // know (e.g. mid-firmware-upgrade with mismatched tabs).
+// Apply the most recent fetch result. Returns true if anything actually
+// changed on this remote (so the caller can choose whether to log or drop
+// any pending POST). A no-op apply (state already matches) returns false —
+// the common case for the periodic poll.
+bool apply_remote_state() {
     GUIlists targetList = (GUIlists)s_apply_guiList;
+    s_applying_remote = true;
+
+    // Set the scene name FIRST so that get_gui_list_withFallback(SCENE_GUI_LIST)
+    // resolves to the TARGET scene's tab list rather than whichever scene this
+    // remote happened to be on. Without this, a remote sitting at scene
+    // selection (or another scene) would look up "Lyrion-NowPlaying" in the
+    // wrong list, fail, and silently bail.
+    bool scene_changed = (s_apply_scene != get_activeScene());
+    if (scene_changed) {
+        gui_memoryOptimizer_setActiveSceneName(s_apply_scene);
+        setLabelActiveScene();
+    }
+
+    // Now look up the GUI in the (target scene's) list. If the remote sent a
+    // GUI name this firmware doesn't know (mid-upgrade mismatch), bail —
+    // we've already adopted the scene name, which is harmless on its own.
     gui_list lst = get_gui_list_withFallback(targetList);
     int idx = -1;
     for (size_t i = 0; i < lst->size(); i++) {
@@ -200,36 +223,40 @@ void apply_remote_state() {
     if (idx < 0) {
         omote_log_w("[blasterSync] apply: GUI \"%s\" not in list %d on this remote; "
                     "keeping local state\r\n", s_apply_guiName.c_str(), s_apply_guiList);
-        return;
+        s_applying_remote = false;
+        return scene_changed;
     }
 
-    s_applying_remote = true;
-
-    // Update the scene name + status-bar label. Note: this does NOT run the
-    // scene's IR start sequence — the A/V hardware is already in this state
-    // (that's why the blaster reported it). We're only catching the GUI up.
-    if (s_apply_scene != get_activeScene()) {
-        gui_memoryOptimizer_setActiveSceneName(s_apply_scene);
-        setLabelActiveScene();
-    }
+    // Note: we deliberately do NOT run the scene's IR start sequence — the A/V
+    // hardware is already in this state (that's why the blaster reported it).
+    // We're only catching the GUI up.
 
     // Navigate to the GUI tab. navigateToGUI auto-rewrites lastActiveIndex
     // (from gui_state.activeTabID) any time it crosses gui_lists — so do this
     // BEFORE restoring lastIndex below.
-    if (s_apply_guiName != get_activeGUIname() ||
-        s_apply_guiList != get_activeGUIlist()) {
+    bool nav_changed = (scene_changed ||
+                        s_apply_guiName != get_activeGUIname() ||
+                        s_apply_guiList != get_activeGUIlist());
+    if (nav_changed) {
         guis_doTabCreationForSpecificGUI(targetList, idx);
     }
 
     // Restore the cross-list "back to" index last, in case the navigate above
     // clobbered it.
-    if (s_apply_lastIdx != get_lastActiveGUIlistIndex()) {
+    bool idx_changed = (s_apply_lastIdx != get_lastActiveGUIlistIndex());
+    if (idx_changed) {
         gui_memoryOptimizer_setLastActiveGUIlistIndex(s_apply_lastIdx);
     }
 
     s_applying_remote = false;
 
-    omote_log_i("[blasterSync] applied remote state\r\n");
+    bool any = scene_changed || nav_changed || idx_changed;
+    if (any) {
+        omote_log_i("[blasterSync] applied remote state: scene=\"%s\" gui=\"%s\" list=%d idx=%d\r\n",
+                    s_apply_scene.c_str(), s_apply_guiName.c_str(),
+                    s_apply_guiList, s_apply_lastIdx);
+    }
+    return any;
 }
 
 void push_state_now() {
@@ -243,6 +270,23 @@ void push_state_now() {
         // Don't retry — blasterClient will mark itself unavailable on the
         // next failed /send anyway; we'll re-POST when it recovers.
     }
+}
+
+// Spawn the fetch_task with the right bookkeeping. Returns true on success.
+// Clears s_local_changed_during_fetch so the consumer can use it as the
+// "user touched after fetch started" gate.
+bool start_fetch_async() {
+    if (s_fetch_in_flight) return false;
+    s_fetch_in_flight = true;
+    s_local_changed_during_fetch = false;
+    BaseType_t ok = xTaskCreate(fetch_task, "blaster_sync", 4096,
+                                nullptr, 1, nullptr);
+    if (ok != pdPASS) {
+        s_fetch_in_flight = false;
+        omote_log_w("[blasterSync] could not spawn fetch task\r\n");
+        return false;
+    }
+    return true;
 }
 
 }  // namespace
@@ -265,19 +309,12 @@ void blasterStateSync_onBlasterAvailable() {
     // the apply.
     if (!s_first_sync_started) {
         s_first_sync_started = true;
-        if (!s_fetch_in_flight) {
-            s_fetch_in_flight = true;
-            BaseType_t ok = xTaskCreate(fetch_task, "blaster_sync", 4096,
-                                        nullptr, 1, nullptr);
-            if (ok != pdPASS) {
-                s_fetch_in_flight = false;
-                omote_log_w("[blasterSync] could not spawn fetch task\r\n");
-                // Without a fetch, open the gate and let the next push
-                // establish blaster state from ours.
-                s_first_sync_done = true;
-                s_post_pending = true;
-                s_post_due_ms  = millis();
-            }
+        if (!start_fetch_async()) {
+            // Without a fetch, open the gate and let the next push establish
+            // blaster state from ours.
+            s_first_sync_done = true;
+            s_post_pending = true;
+            s_post_due_ms  = millis();
         }
         return;
     }
@@ -294,25 +331,29 @@ void blasterStateSync_loop() {
         // happen with the in_flight guard, but be defensive) doesn't get
         // dropped silently.
         s_apply_pending = false;
+        bool is_boot_sync = !s_first_sync_done;
         if (s_local_changed_during_fetch) {
-            omote_log_i("[blasterSync] user touched device during fetch — skip apply\r\n");
-            // Local change has already been queued for POST via the dirty
-            // flag, so the next push below will make blaster RAM reflect the
-            // user's choice. Nothing more to do.
+            // User touched the device while the fetch was in flight; their
+            // change wins and has already been queued for POST below.
+            omote_log_d("[blasterSync] local change during fetch — skip apply\r\n");
         } else if (s_apply_valid) {
-            apply_remote_state();
-            // After apply, local and remote agree — drop any pending POST
-            // (the setters fired during apply marked it dirty under the
-            // re-entrancy guard, but we DO want to be quiet here).
-            s_post_pending = false;
-        } else {
-            // Blaster was cold. Push our local NVS-restored state up so it
-            // becomes the source of truth from now on.
+            // apply_remote_state is a no-op (returns false, no log) when the
+            // blaster's snapshot already matches local — the common case for
+            // the periodic poll.
+            if (apply_remote_state()) {
+                // Our state was just rewritten from the blaster; suppress
+                // any POST that would just echo it back.
+                s_post_pending = false;
+            }
+        } else if (is_boot_sync) {
+            // Blaster was cold on boot. Push our local NVS-restored state up
+            // so it becomes the source of truth from now on.
             s_post_pending = true;
             s_post_due_ms  = millis();
         }
         // Boot reconcile is over — POSTs may resume.
         s_first_sync_done = true;
+        s_next_poll_ms    = millis() + kPollIntervalMs;
     }
 
     if (s_post_pending && (long)(millis() - s_post_due_ms) >= 0) {
@@ -323,9 +364,24 @@ void blasterStateSync_loop() {
         if (blaster_isAvailable()) {
             push_state_now();
             s_post_pending = false;
+            // Reset the poll clock so we don't immediately re-fetch what we
+            // just pushed; the blaster needs a beat to settle and the next
+            // poll would just echo our own state back.
+            s_next_poll_ms = millis() + kPollIntervalMs;
         }
         // If !available, leave s_post_pending set; we'll retry as soon as
         // blasterClient recovers (its loop re-polls every 60 s).
+    }
+
+    // Periodic poll once boot sync is done. Skipped while a POST is pending
+    // (don't fetch stale state mid-write) or a fetch is already in flight.
+    if (s_first_sync_done
+        && !s_post_pending
+        && !s_fetch_in_flight
+        && blaster_isAvailable()
+        && (long)(millis() - s_next_poll_ms) >= 0) {
+        s_next_poll_ms = millis() + kPollIntervalMs;
+        start_fetch_async();
     }
 }
 

@@ -23,6 +23,16 @@ static const lv_img_dsc_t* icon_for_scene(const std::string& scene_name) {
   return NULL;
 }
 
+// Tint colors match the colored hotkeys that activate each scene
+// (see scene__default.cpp: RED→AppleTV, GREEN→Kodi, YELLOW→Kodi_BT, BLUE→Lyrion)
+static bool tint_for_scene(const std::string& scene_name, lv_color_t* out_color) {
+  if (scene_name == scene_name_appleTV) { *out_color = lv_color_hex(0xFF3030); return true; }
+  if (scene_name == scene_name_kodi)    { *out_color = lv_color_hex(0x30D030); return true; }
+  if (scene_name == scene_name_kodi_BT) { *out_color = lv_color_hex(0xFFD030); return true; }
+  if (scene_name == scene_name_lyrion)  { *out_color = lv_color_hex(0x4090FF); return true; }
+  return false;
+}
+
 static uint16_t activate_scene_command;
 static bool doForceScene;
 //void activate_scene_async(void *command) {
@@ -132,6 +142,11 @@ void create_tab_content_sceneSelection(lv_obj_t* tab) {
         lv_img_set_src(icon, icon_src);
         lv_obj_align(icon, LV_ALIGN_LEFT_MID, 8, 0);
         lv_obj_add_flag(icon, LV_OBJ_FLAG_FLOATING);
+        lv_color_t tint;
+        if (tint_for_scene(scenes->at(i), &tint)) {
+          lv_obj_set_style_img_recolor(icon, tint, LV_PART_MAIN);
+          lv_obj_set_style_img_recolor_opa(icon, LV_OPA_70, LV_PART_MAIN);
+        }
       }
 
       lv_obj_t* label = lv_label_create(button);
