@@ -51,6 +51,13 @@ bool s_applying_remote = false;
 // Dirty buffer for the POST side.
 bool          s_post_pending = false;
 unsigned long s_post_due_ms  = 0;
+// True when the pending POST is an automatic reconcile (boot-time echo of
+// NVS-restored state, cold-blaster push, or mid-session reconnect) rather than
+// user-driven navigation. Reconcile pushes carry "reconcile":true so the
+// blaster updates its state WITHOUT treating it as user activity — otherwise
+// every IMU wake (which reboots the remote and re-syncs) would reset the
+// blaster's inactivity auto-off timer.
+bool          s_post_is_reconcile = false;
 
 // Pending apply from a completed GET. Written on the fetch task, consumed on
 // the main thread in blasterStateSync_loop(). Single producer / single
@@ -128,7 +135,7 @@ void escape_into(const std::string& s, String& out) {
     }
 }
 
-String build_state_body() {
+String build_state_body(bool reconcile) {
     String body;
     body.reserve(128);
     body  = "{\"scene\":\"";
@@ -139,6 +146,9 @@ String build_state_body() {
     body += String(get_activeGUIlist());
     body += ",\"lastIndex\":";
     body += String(get_lastActiveGUIlistIndex());
+    // Only emitted for automatic pushes; absent (false) for user navigation so
+    // older blasters stay backward-compatible (missing key == user activity).
+    if (reconcile) body += ",\"reconcile\":true";
     body += "}";
     return body;
 }
@@ -259,9 +269,9 @@ bool apply_remote_state() {
     return any;
 }
 
-void push_state_now() {
+void push_state_now(bool reconcile) {
     if (!blaster_isAvailable()) return;  // try again next time it's up
-    String body = build_state_body();
+    String body = build_state_body(reconcile);
     int code = blaster_postJson("/state", body.c_str());
     if (code >= 200 && code < 300) {
         omote_log_d("[blasterSync] POST /state -> %d ok\r\n", code);
@@ -298,6 +308,15 @@ void blasterStateSync_postCurrent() {
         // veto the reconcile — their action wins.
         s_local_changed_during_fetch = true;
     }
+    // Classify the push. Setter calls before the boot reconcile completes are
+    // boot bring-up (GUI tab creation replaying NVS state), not user
+    // navigation, so their echo must not reset the blaster's timer. A genuine
+    // user change (after boot-sync) upgrades any pending push to user-driven.
+    if (s_first_sync_done) {
+        s_post_is_reconcile = false;
+    } else if (!s_post_pending) {
+        s_post_is_reconcile = true;
+    }
     s_post_pending = true;
     s_post_due_ms  = millis() + kPostCoalesceMs;
 }
@@ -311,18 +330,21 @@ void blasterStateSync_onBlasterAvailable() {
         s_first_sync_started = true;
         if (!start_fetch_async()) {
             // Without a fetch, open the gate and let the next push establish
-            // blaster state from ours.
-            s_first_sync_done = true;
-            s_post_pending = true;
-            s_post_due_ms  = millis();
+            // blaster state from ours. Automatic, so don't reset its timer.
+            s_first_sync_done   = true;
+            s_post_pending      = true;
+            s_post_is_reconcile = true;
+            s_post_due_ms       = millis();
         }
         return;
     }
 
     // Reconnect mid-session (WiFi blip, blaster reboot). Push our current
     // state so the blaster catches up — never overwrite the user's screen.
-    s_post_pending = true;
-    s_post_due_ms  = millis();
+    // Automatic catch-up, not user activity, so don't reset the auto-off timer.
+    s_post_pending      = true;
+    s_post_is_reconcile = true;
+    s_post_due_ms       = millis();
 }
 
 void blasterStateSync_loop() {
@@ -347,9 +369,11 @@ void blasterStateSync_loop() {
             }
         } else if (is_boot_sync) {
             // Blaster was cold on boot. Push our local NVS-restored state up
-            // so it becomes the source of truth from now on.
-            s_post_pending = true;
-            s_post_due_ms  = millis();
+            // so it becomes the source of truth from now on. Automatic, so
+            // flag it as reconcile — don't reset the blaster's auto-off timer.
+            s_post_pending      = true;
+            s_post_is_reconcile = true;
+            s_post_due_ms       = millis();
         }
         // Boot reconcile is over — POSTs may resume.
         s_first_sync_done = true;
@@ -362,8 +386,9 @@ void blasterStateSync_loop() {
         // blaster's authoritative state.
         if (s_first_sync_started && !s_first_sync_done) return;
         if (blaster_isAvailable()) {
-            push_state_now();
-            s_post_pending = false;
+            push_state_now(s_post_is_reconcile);
+            s_post_pending      = false;
+            s_post_is_reconcile = false;  // next push is user-driven unless re-flagged
             // Reset the poll clock so we don't immediately re-fetch what we
             // just pushed; the blaster needs a beat to settle and the next
             // poll would just echo our own state back.
