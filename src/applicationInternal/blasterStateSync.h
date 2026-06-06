@@ -30,10 +30,18 @@ void blasterStateSync_loop();
 // such call after boot triggers a /state GET; later calls just re-POST.
 void blasterStateSync_onBlasterAvailable();
 
+// Signal user activity that does NOT change our GUI state (e.g. a Kodi transport
+// or navigation command sent over WebSocket, which never touches the blaster's
+// IR path). Queues a user-driven (non-reconcile) POST of the current state so
+// the blaster resets its inactivity auto-off timer, even though scene/gui are
+// unchanged. No-op until the boot reconcile has completed.
+void blasterStateSync_pingActivity();
+
 #else
 
 inline void blasterStateSync_postCurrent() {}
 inline void blasterStateSync_loop() {}
 inline void blasterStateSync_onBlasterAvailable() {}
+inline void blasterStateSync_pingActivity() {}
 
 #endif

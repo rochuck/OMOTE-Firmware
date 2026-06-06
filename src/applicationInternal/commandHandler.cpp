@@ -1,5 +1,6 @@
 #include "applicationInternal/commandHandler.h"
 #include "applicationInternal/blasterClient.h"
+#include "applicationInternal/blasterStateSync.h"
 #include "applicationInternal/hardware/hardwarePresenter.h"
 #include "applicationInternal/omote_log.h"
 #include "applicationInternal/scenes/sceneHandler.h"
@@ -337,6 +338,10 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
         omote_log_d("execute: kodi method '%s' params '%s'\r\n", method.c_str(), params.c_str());
         bool ok = kodi_sendRpc_HAL(method, params);
         if (!ok) { omote_log_e("kodi: RPC '%s' failed\r\n", method.c_str()); }
+        // Kodi commands go straight to Kodi over WebSocket — the blaster never
+        // sees them, so without this its inactivity timer would auto-off while
+        // the user is actively driving Kodi. Ping it as user activity.
+        blasterStateSync_pingActivity();
         break;
     }
 #endif

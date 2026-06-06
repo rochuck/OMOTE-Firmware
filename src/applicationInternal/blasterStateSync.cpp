@@ -321,6 +321,22 @@ void blasterStateSync_postCurrent() {
     s_post_due_ms  = millis() + kPostCoalesceMs;
 }
 
+void blasterStateSync_pingActivity() {
+    if (s_applying_remote) return;     // re-entry from apply_remote_state()
+    // Don't interfere with the boot reconcile: until it's done the POST gate in
+    // the loop suppresses sends anyway, and a Kodi keypress here is unrelated to
+    // the GUI-state reconcile in flight. Just drop the ping; the blaster's timer
+    // only just (re)started at boot.
+    if (!s_first_sync_done) return;
+    // Explicit user action → user-driven push so the blaster treats it as
+    // activity and resets its auto-off timer. Coalesced with kPostCoalesceMs so
+    // a burst of navigation presses collapses into one POST.
+    s_local_changed_during_fetch = true;
+    s_post_is_reconcile          = false;
+    s_post_pending               = true;
+    s_post_due_ms                = millis() + kPostCoalesceMs;
+}
+
 void blasterStateSync_onBlasterAvailable() {
     // First connect after boot: kick off a GET /state and reconcile. Marking
     // s_first_sync_started here also arms the "user-wins" guard inside
