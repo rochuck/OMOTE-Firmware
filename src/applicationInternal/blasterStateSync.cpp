@@ -3,6 +3,7 @@
 #if (ENABLE_WIFI_AND_MQTT == 1) && defined(ARDUINO)
 
 #include "blasterClient.h"
+#include "applicationInternal/clockTime.h"
 #include "applicationInternal/gui/guiBase.h"
 #include "applicationInternal/gui/guiMemoryOptimizer.h"
 #include "applicationInternal/hardware/hardwarePresenter.h"
@@ -68,6 +69,10 @@ std::string   s_apply_scene;
 std::string   s_apply_guiName;
 int           s_apply_guiList = 0;
 int           s_apply_lastIdx = 0;
+// Wall-clock time carried alongside the GUI state. Independent of s_apply_valid
+// (the blaster serves the epoch even when GUI-cold). Consumed on the main thread.
+bool          s_apply_have_epoch = false;
+long          s_apply_epoch      = 0;
 
 volatile bool s_fetch_in_flight = false;
 
@@ -163,6 +168,12 @@ void fetch_task(void*) {
     String body;
     int code = blaster_getJson("/state", body);
     if (code >= 200 && code < 300) {
+        // Parse the clock first — it's served independently of GUI validity, and
+        // we want it even when the blaster is GUI-cold (valid=false). epoch is
+        // ~1.7e9, which fits int32 until 2038; extract_int uses strtol.
+        int ep = 0;
+        s_apply_have_epoch = extract_int(body, "epoch", ep);
+        s_apply_epoch      = (long)ep;
         bool valid = false;
         bool ok = extract_bool(body, "valid", valid);
         if (ok && valid) {
@@ -191,6 +202,7 @@ void fetch_task(void*) {
         s_apply_pending = true;
     } else {
         omote_log_w("[blasterSync] GET /state failed (%d); will push local state\r\n", code);
+        s_apply_have_epoch = false;  // no fresh time this round; don't re-apply a stale epoch
         // Treat as "blaster cold" — main loop will POST our NVS state so the
         // blaster (if it comes back) has authoritative state from us. This
         // also closes out the boot-sync gate so future POSTs can flow.
@@ -369,6 +381,13 @@ void blasterStateSync_loop() {
         // happen with the in_flight guard, but be defensive) doesn't get
         // dropped silently.
         s_apply_pending = false;
+        // Adopt the wall clock regardless of whether the GUI state applies — the
+        // periodic poll keeps the remote's elapsed-time clock corrected even on a
+        // no-op apply (the common case).
+        if (s_apply_have_epoch) {
+            clockTime_setBaseEpoch((time_t)s_apply_epoch);
+            s_apply_have_epoch = false;
+        }
         bool is_boot_sync = !s_first_sync_done;
         if (s_local_changed_during_fetch) {
             // User touched the device while the fetch was in flight; their

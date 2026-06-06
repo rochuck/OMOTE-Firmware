@@ -22,6 +22,7 @@
 //   special
 #include "applicationInternal/blasterClient.h"
 #include "applicationInternal/blasterStateSync.h"
+#include "applicationInternal/clockTime.h"
 #include "applicationInternal/commandHandler.h"
 #include "devices/misc/device_specialCommands.h"
 //   keyboards
@@ -246,6 +247,9 @@ main(int argc, char* argv[]) {
 // this call will also init websockets to home assistant
 #if (ENABLE_WIFI_AND_MQTT == 1)
     init_mqtt();
+    // Set the Edmonton timezone for the status-bar wall clock; the epoch itself
+    // arrives from the blaster via /state sync (see blasterStateSync).
+    clockTime_begin();
     // Discover the OMOTE-Blaster (cached IP first, mDNS fallback) and
     // mark it available if the handshake succeeds. Safe to call before
     // WiFi has fully associated — blaster_init() handles that case.
@@ -349,5 +353,8 @@ loop(unsigned long* pIMUTaskTimer, unsigned long* pUpdateStatusTimer) {
 
         // update user_led, battery, BLE, memoryUsage on GUI
         updateHardwareStatusAndShowOnGUI();
+
+        // alternate the top-center label between scene name and wall-clock time
+        setSceneLabelAlternating();
     }
 }

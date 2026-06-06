@@ -6,6 +6,7 @@
 #include "applicationInternal/hardware/hardwarePresenter.h"
 #include "applicationInternal/commandHandler.h"
 #include "applicationInternal/blasterClient.h"
+#include "applicationInternal/clockTime.h"
 #include "applicationInternal/omote_log.h"
 #include "guis/gui_sceneSelection.h"
 #include "scenes/scene__default.h"
@@ -15,6 +16,23 @@ void setLabelActiveScene() {
   if ((SceneLabel != NULL) && sceneExists(gui_memoryOptimizer_getActiveSceneName())) {
     lv_label_set_text(SceneLabel, gui_memoryOptimizer_getActiveSceneName().c_str());
   }
+}
+
+// Called once per second from the main loop. Alternates the top-center label
+// between the active scene name and the wall-clock time (24h HH:MM). When no time
+// is available yet (blaster unreachable / NTP not synced) it always shows the
+// scene name, so there is no placeholder and no stale alternation.
+void setSceneLabelAlternating() {
+#if (ENABLE_WIFI_AND_MQTT == 1)
+  static bool showTime = false;
+  showTime = !showTime;
+  char buf[6];  // "HH:MM" + NUL
+  if (showTime && clockTime_valid() && clockTime_formatHHMM(buf, sizeof(buf))) {
+    if (SceneLabel != NULL) {lv_label_set_text(SceneLabel, buf);}
+    return;
+  }
+#endif
+  setLabelActiveScene();
 }
 
 void showSpecificGUI(GUIlists GUIlist, std::string GUIname);
