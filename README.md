@@ -120,6 +120,17 @@ The blaster also stores `(scene, guiName, guiList, lastIndex)` in RAM and serves
 
 The blaster keeps this in RAM only — a blaster reboot wipes it. Acceptable because the next remote to wake republishes its state, restoring the snapshot. There is no continuous polling; reconciliation only happens once on remote boot/wake, since only one remote is in use at a time.
 
+**`GET` / `POST /inactivity`** — the blaster's inactivity auto-off window:
+
+```jsonc
+// GET  -> current window in whole minutes
+{ "ok": true, "timeoutMinutes": 60 }
+// POST -> set it (clamped 1–1440, persisted to EEPROM on the blaster)
+{ "timeoutMinutes": 90 }
+```
+
+The blaster auto-powers-off the AV gear after this long with no user activity. The value is the blaster's, not the remote's — the **Inactivity Timer** setting (under Display/Keyboard in the settings tab) reads it to seed its dropdown (15/30/45/60/90/120/180 min) and POSTs the chosen value. Both calls are guarded by `blaster_isAvailable()`, so they no-op when the blaster is unreachable.
+
 ### Human-readable command names
 
 `scene` comes for free from `get_activeScene()`. The command `name` is supplied per command via the optional third argument to `makeCommandData()`:

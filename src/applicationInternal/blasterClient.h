@@ -35,6 +35,14 @@ bool blaster_send(int protocol,
 int  blaster_postJson(const char* path, const char* body);
 int  blaster_getJson (const char* path, String& outBody);
 
+// Inactivity auto-off window, configured on the blaster. The settings screen
+// reads the current value to populate its menu and writes the user's choice.
+// Both are synchronous HTTP round-trips (like blaster_send) and return false if
+// the blaster is unavailable or the request fails. getInactivityTimeout fills
+// outMinutes only on success.
+bool blaster_getInactivityTimeout(int& outMinutes);
+bool blaster_setInactivityTimeout(int minutes);
+
 #else
 
 inline void blaster_init() {}
@@ -42,4 +50,6 @@ inline void blaster_loop() {}
 inline bool blaster_isEnabled()   { return false; }
 inline bool blaster_isAvailable() { return false; }
 inline bool blaster_send(int, std::list<std::string>, std::string, std::string = "") { return false; }
+inline bool blaster_getInactivityTimeout(int&) { return false; }
+inline bool blaster_setInactivityTimeout(int)  { return false; }
 #endif

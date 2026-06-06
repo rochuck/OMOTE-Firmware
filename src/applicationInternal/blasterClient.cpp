@@ -15,6 +15,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include <cctype>
+
 namespace {
 
 // NVS — own namespace so we don't tangle with the existing "settings" file.
@@ -350,6 +352,40 @@ int blaster_getJson(const char* path, String& outBody) {
     }
     http.end();
     return code;
+}
+
+bool blaster_getInactivityTimeout(int& outMinutes) {
+    if (!s_enabled || !s_available) return false;
+    String body;
+    int code = blaster_getJson("/inactivity", body);
+    if (code < 200 || code >= 300) {
+        omote_log_w("[blaster] GET /inactivity -> %d\r\n", code);
+        return false;
+    }
+    // Tiny single-field parse — the response is {"ok":true,"timeoutMinutes":N}.
+    int p = body.indexOf("\"timeoutMinutes\"");
+    if (p < 0) return false;
+    int c = body.indexOf(':', p);
+    if (c < 0) return false;
+    int i = c + 1;
+    while (i < (int)body.length() && isspace((unsigned char)body[i])) i++;
+    int start = i;
+    while (i < (int)body.length() && isdigit((unsigned char)body[i])) i++;
+    if (i == start) return false;
+    outMinutes = body.substring(start, i).toInt();
+    return true;
+}
+
+bool blaster_setInactivityTimeout(int minutes) {
+    if (!s_enabled || !s_available) return false;
+    String body = "{\"timeoutMinutes\":" + String(minutes) + "}";
+    int code = blaster_postJson("/inactivity", body.c_str());
+    if (code >= 200 && code < 300) {
+        omote_log_d("[blaster] POST /inactivity %d min -> %d ok\r\n", minutes, code);
+        return true;
+    }
+    omote_log_w("[blaster] POST /inactivity %d min -> %d\r\n", minutes, code);
+    return false;
 }
 
 #endif  // ENABLE_WIFI_AND_MQTT

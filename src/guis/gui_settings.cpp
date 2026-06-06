@@ -1,10 +1,17 @@
 #include <lvgl.h>
 #include "applicationInternal/hardware/hardwarePresenter.h"
 #include "applicationInternal/memoryUsage.h"
+#include "applicationInternal/blasterClient.h"
 #include "applicationInternal/gui/guiBase.h"
 #include "applicationInternal/gui/guiRegistry.h"
 #include "applicationInternal/omote_log.h"
 #include "guis/gui_settings.h"
+
+// Inactivity auto-off window (minutes) offered for the IR blaster. The blaster is
+// the authority — these values are read/written over HTTP (see blasterClient).
+// Keep the dropdown option labels below in lock-step with this array.
+static const int kInactivityMinutes[] = {15, 30, 45, 60, 90, 120, 180};
+static constexpr int kInactivityCount = sizeof(kInactivityMinutes) / sizeof(kInactivityMinutes[0]);
 
 // LVGL declarations
 LV_IMG_DECLARE(high_brightness);
@@ -56,6 +63,19 @@ static void timout_event_cb(lv_event_t* e){
   setLastActivityTimestamp();
   // save preferences now, otherwise if you set a very big timeout and upload your firmware again, it never got saved
   save_preferences();
+}
+
+// inactivity timer event handler — pushes the chosen window to the IR blaster
+static void inactivityTimer_event_cb(lv_event_t* e){
+  lv_obj_t* drop = lv_event_get_target(e);
+  uint16_t selected = lv_dropdown_get_selected(drop);
+  if (selected >= (uint16_t)kInactivityCount) return;
+  int minutes = kInactivityMinutes[selected];
+  if (blaster_setInactivityTimeout(minutes)) {
+    omote_log_v("New blaster inactivity timeout: %d min\r\n", minutes);
+  } else {
+    omote_log_w("Could not set blaster inactivity timeout (blaster unavailable?)\r\n");
+  }
 }
 
 // motion threshold event handler
@@ -233,6 +253,45 @@ void create_tab_content_settings(lv_obj_t* tab) {
   lv_obj_align(brightnessIcon, LV_ALIGN_TOP_RIGHT, 0, -1);
   lv_obj_add_event_cb(slider, kb_slider_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
   #endif
+
+  // Inactivity timer for the IR blaster ------------------------------------------------------
+  // The blaster auto-powers-off the AV gear after this long with no activity. The
+  // value lives on the blaster; we read the current one to seed the dropdown and
+  // POST the user's choice. If the blaster is unreachable the dropdown still shows
+  // a sensible default and the write simply no-ops.
+  menuLabel = lv_label_create(tab);
+  lv_label_set_text(menuLabel, "Inactivity Timer");
+  menuBox = lv_obj_create(tab);
+  lv_obj_set_size(menuBox, lv_pct(100), 44);
+  lv_obj_set_style_bg_color(menuBox, color_primary, LV_PART_MAIN);
+  lv_obj_set_style_border_width(menuBox, 0, LV_PART_MAIN);
+
+  menuLabel = lv_label_create(menuBox);
+  lv_label_set_text(menuLabel, "Auto-off");
+  lv_obj_align(menuLabel, LV_ALIGN_TOP_LEFT, 0, 3);
+  drop = lv_dropdown_create(menuBox);
+  lv_dropdown_set_options(drop, "15m\n"
+                                "30m\n"
+                                "45m\n"
+                                "60m\n"
+                                "90m\n"
+                                "120m\n"
+                                "180m"); // keep in lock-step with kInactivityMinutes
+  // Seed from the blaster's current value; fall back to 60 min if unreachable.
+  int currentInactivity = 60;
+  blaster_getInactivityTimeout(currentInactivity);
+  for (int i = 0; i < kInactivityCount; i++) {
+    if (kInactivityMinutes[i] == currentInactivity) { lv_dropdown_set_selected(drop, i); break; }
+  }
+  lv_dropdown_set_selected_highlight(drop, true);
+  lv_obj_align(drop, LV_ALIGN_TOP_RIGHT, 0, 0);
+  lv_obj_set_size(drop, 80, 22);
+  lv_obj_set_style_pad_top(drop, 1, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(drop, color_primary, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(lv_dropdown_get_list(drop), color_primary, LV_PART_MAIN);
+  lv_obj_set_style_border_width(lv_dropdown_get_list(drop), 1, LV_PART_MAIN);
+  lv_obj_set_style_border_color(lv_dropdown_get_list(drop), lv_color_hex(0x505050), LV_PART_MAIN);
+  lv_obj_add_event_cb(drop, inactivityTimer_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
   // Another setting for the battery ----------------------------------------------------------
   menuLabel = lv_label_create(tab);
