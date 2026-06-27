@@ -26,7 +26,7 @@ scene_setKeys_kodi() {
         {KEY_STOP,  SHORT            },    {KEY_REWI,  SHORT_REPEATED   },    {KEY_PLAY,  SHORT            },    {KEY_FORW,  SHORT_REPEATED   },
         {KEY_CONF,  SHORT            },                                                                          {KEY_INFO,  SHORT            },
                                                              {KEY_UP,    SHORT_REPEATED   },
-                          {KEY_LEFT,  SHORT_REPEATED   },    {KEY_OK,    SHORT            },    {KEY_RIGHT, SHORT_REPEATED   },
+                          {KEY_LEFT,  SHORT_REPEATED   },    {KEY_OK,    SHORTorLONG      },    {KEY_RIGHT, SHORT_REPEATED   },
                                                              {KEY_DOWN,  SHORT_REPEATED   },
         {KEY_BACK,  SHORT            },                                                                          {KEY_SRC,   SHORT            },
                                                                                                                  {KEY_CHUP,  SHORT            },
@@ -47,6 +47,7 @@ scene_setKeys_kodi() {
 
     key_commands_long_kodi = {
         {KEY_STOP,  KODI_MUTE_TOGGLE },
+        {KEY_OK,    KODI_OSD         },    // hold OK during playback for the player OSD bar
     };
 #endif
 }

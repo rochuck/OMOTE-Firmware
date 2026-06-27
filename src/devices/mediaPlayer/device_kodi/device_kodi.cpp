@@ -13,6 +13,7 @@ uint16_t KODI_BACK;
 uint16_t KODI_HOME;
 uint16_t KODI_INFO;
 uint16_t KODI_CONTEXT_MENU;
+uint16_t KODI_OSD;
 
 uint16_t KODI_PLAY_PAUSE;
 uint16_t KODI_STOP;
@@ -44,6 +45,7 @@ register_device_kodi(void) {
     register_command(&KODI_HOME,          makeCommandData(KODI, {"Input.Home",          "{}"}));
     register_command(&KODI_INFO,          makeCommandData(KODI, {"Input.Info",          "{}"}));
     register_command(&KODI_CONTEXT_MENU,  makeCommandData(KODI, {"Input.ContextMenu",   "{}"}));
+    register_command(&KODI_OSD,           makeCommandData(KODI, {"Input.ExecuteAction", "{\"action\":\"osd\"}"}));
 
     // Transport - acts on Player.GetActivePlayers()[0]. Using "playerid":1 (video) is a sane default
     // for typical Kodi use; for music you may want playerid:0. Player.PlayPause/Stop accept "to":"toggle".

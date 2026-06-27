@@ -14,6 +14,7 @@ extern uint16_t KODI_BACK;
 extern uint16_t KODI_HOME;
 extern uint16_t KODI_INFO;
 extern uint16_t KODI_CONTEXT_MENU;
+extern uint16_t KODI_OSD;          // player on-screen display (play/pause/subtitles/audio bar)
 
 // Transport
 extern uint16_t KODI_PLAY_PAUSE;
