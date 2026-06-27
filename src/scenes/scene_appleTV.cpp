@@ -30,7 +30,7 @@ scene_setKeys_appleTV() {
                                                              {KEY_UP,    SHORT_REPEATED   },
                           {KEY_LEFT,  SHORT_REPEATED   },    {KEY_OK,    SHORT            },    {KEY_RIGHT, SHORT_REPEATED   },
                                                              {KEY_DOWN,  SHORT_REPEATED   },
-                                                                                                                 {KEY_SRC,   SHORT            },
+        {KEY_BACK,  SHORT            },                                                                          {KEY_SRC,   SHORT            },
                                                                                                                  {KEY_CHUP,  SHORT            },
                                                                                                                  {KEY_CHDOW, SHORT            },
     };
@@ -41,7 +41,7 @@ scene_setKeys_appleTV() {
                                                                           {KEY_UP,    APPLETV_UP                },
                               {KEY_LEFT,  APPLETV_LEFT              },    {KEY_OK,    APPLETV_OK                },    {KEY_RIGHT, APPLETV_RIGHT             },
                                                                           {KEY_DOWN,  APPLETV_DOWN              },
-                                                                                                                                            {KEY_SRC,   APPLETV_HOME              },
+        {KEY_BACK,  APPLETV_MENU              },                                                                                            {KEY_SRC,   APPLETV_HOME              },
                                                                                                                                             {KEY_CHUP,  SHARP_CHANNEL_UP          },
                                                                                                                                             {KEY_CHDOW, SHARP_CHANNEL_DOWN        },
     };
@@ -49,6 +49,14 @@ scene_setKeys_appleTV() {
     key_commands_long_appleTV = {
 
     };
+
+#if (ENABLE_COMPANION == 1)
+    // Long-press Home (SRC) force-quits the foreground Apple TV app over the
+    // Companion protocol: it double-presses Home to open the app switcher, then
+    // swipes up on the highlighted card. Short-press of SRC stays Home.
+    key_repeatModes_appleTV[KEY_SRC]   = SHORTorLONG;
+    key_commands_long_appleTV[KEY_SRC] = COMPANION_KILL_APP;
+#endif
 }
 /* clang-format on */
 
