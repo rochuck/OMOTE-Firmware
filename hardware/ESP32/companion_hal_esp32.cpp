@@ -22,6 +22,7 @@
 #include <freertos/queue.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
+#include <esp_timer.h>
 #include <string.h>
 
 // Rhys Weatherley's Arduino Crypto library
@@ -52,6 +53,26 @@ static const char* TAG = "COMPANION";
 #define FT_PV_START  5
 #define FT_PV_NEXT   6
 #define FT_E_OPACK   8
+
+// HID button command codes (Companion "_hidC" usage values). Subset of pyatv's
+// HidCommand enum; add more as needed.
+#define HID_UP         1
+#define HID_DOWN       2
+#define HID_LEFT       3
+#define HID_RIGHT      4
+#define HID_MENU       5
+#define HID_SELECT     6
+#define HID_HOME       7
+#define HID_PLAYPAUSE 14
+
+// Button states for "_hidC" (_hBtS field)
+#define HID_BTN_DOWN   1
+#define HID_BTN_UP     2
+
+// Touch phases for "_hidT" (_tPh field), from pyatv's TouchAction enum.
+#define TOUCH_PRESS    1
+#define TOUCH_HOLD     3
+#define TOUCH_RELEASE  4
 
 // TLV8 keys (HAP spec)
 #define TLV_METHOD         0
@@ -86,6 +107,7 @@ struct CompanionSession {
     bool     encrypted;
     uint64_t sid;
     uint32_t xid;
+    uint64_t touch_base_ns; // reference timestamp for "_hidT" event _ns deltas
 };
 
 enum CompanionState {
@@ -95,6 +117,21 @@ enum CompanionState {
     ST_SESSION_SETUP,
     ST_READY,
     ST_ERROR
+};
+
+// Queued command kinds. The command queue carries one of these per request.
+enum CompanionCmdType : uint8_t {
+    CCMD_LAUNCH  = 0, // launch app by bundle ID
+    CCMD_HID     = 1, // single HID button press (down + up)
+    CCMD_SWIPE   = 2, // touch swipe gesture
+    CCMD_KILLAPP = 3, // macro: double-Home (app switcher) + swipe up to quit
+};
+
+struct CompanionCmd {
+    uint8_t  type;                // CompanionCmdType
+    char     bundle[CMD_BUNDLE_MAX]; // CCMD_LAUNCH
+    uint8_t  hid;                 // CCMD_HID: HID command code
+    uint16_t sx, sy, ex, ey, dur; // CCMD_SWIPE: start/end coords + duration (ms)
 };
 
 // ---------------------------------------------------------------------------
@@ -541,6 +578,15 @@ static bool ow_int(OpackWriter* w, uint32_t val) {
     }
 }
 
+// Encode an unsigned 64-bit integer. Always uses the 8-byte form (OPACK tag
+// 0x33); the receiver dispatches on the tag so the width need not be minimal.
+static bool ow_uint64(OpackWriter* w, uint64_t val) {
+    uint8_t tmp[9];
+    tmp[0] = 0x33;
+    for (int i = 0; i < 8; i++) { tmp[1 + i] = (uint8_t)(val & 0xFF); val >>= 8; }
+    return ow_write(w, tmp, 9);
+}
+
 // Encode a float64 (double)
 static bool ow_float64(OpackWriter* w, double val) {
     if (!ow_byte(w, 0x36)) return false;
@@ -708,6 +754,57 @@ static size_t opack_launchapp(uint8_t* buf, size_t cap,
     if (!ow_dict_begin(&w, 1))          return 0;
     if (!ow_str(&w, "_bundleID"))       return 0;
     if (!ow_str(&w, bundle_id))         return 0;
+    if (!ow_str(&w, "_x"))              return 0;
+    if (!ow_int(&w, xid))               return 0;
+    return w.pos;
+}
+
+// Build: {_i:"_hidC", _t:2, _c:{_hBtS:state, _hidC:command}, _x:xid}
+// A HID button command (button down or up). Sent as a request (_t:2), so the
+// ATV replies and the caller must read the response.
+static size_t opack_hidc(uint8_t* buf, size_t cap,
+                          uint8_t command, uint8_t state, uint32_t xid) {
+    OpackWriter w = {buf, cap, 0};
+    if (!ow_dict_begin(&w, 4))          return 0;
+    if (!ow_str(&w, "_i"))              return 0;
+    if (!ow_str(&w, "_hidC"))           return 0;
+    if (!ow_str(&w, "_t"))              return 0;
+    if (!ow_int(&w, 2))                 return 0;
+    if (!ow_str(&w, "_c"))              return 0;
+    if (!ow_dict_begin(&w, 2))          return 0;
+    if (!ow_str(&w, "_hBtS"))           return 0;
+    if (!ow_int(&w, state))             return 0;
+    if (!ow_str(&w, "_hidC"))           return 0;
+    if (!ow_int(&w, command))           return 0;
+    if (!ow_str(&w, "_x"))              return 0;
+    if (!ow_int(&w, xid))               return 0;
+    return w.pos;
+}
+
+// Build: {_i:"_hidT", _t:1, _c:{_ns:ns, _tFg:1, _cx:x, _tPh:phase, _cy:y}, _x:xid}
+// A touch event on the virtual trackpad. Sent as an event (_t:1), so the ATV
+// does not reply. Coordinates are in [0,1000]; (0,0) is top-left.
+static size_t opack_hidt(uint8_t* buf, size_t cap,
+                          uint16_t x, uint16_t y, uint8_t phase,
+                          uint64_t ns, uint32_t xid) {
+    OpackWriter w = {buf, cap, 0};
+    if (!ow_dict_begin(&w, 4))          return 0;
+    if (!ow_str(&w, "_i"))              return 0;
+    if (!ow_str(&w, "_hidT"))           return 0;
+    if (!ow_str(&w, "_t"))              return 0;
+    if (!ow_int(&w, 1))                 return 0; // event
+    if (!ow_str(&w, "_c"))              return 0;
+    if (!ow_dict_begin(&w, 5))          return 0;
+    if (!ow_str(&w, "_ns"))             return 0;
+    if (!ow_uint64(&w, ns))             return 0;
+    if (!ow_str(&w, "_tFg"))            return 0;
+    if (!ow_int(&w, 1))                 return 0;
+    if (!ow_str(&w, "_cx"))             return 0;
+    if (!ow_int(&w, x))                 return 0;
+    if (!ow_str(&w, "_tPh"))            return 0;
+    if (!ow_int(&w, phase))             return 0;
+    if (!ow_str(&w, "_cy"))             return 0;
+    if (!ow_int(&w, y))                 return 0;
     if (!ow_str(&w, "_x"))              return 0;
     if (!ow_int(&w, xid))               return 0;
     return w.pos;
@@ -1354,7 +1451,10 @@ static bool run_session_setup(WiFiClient& c) {
         omote_log_e("%s: _systemInfo failed\r\n", TAG); return false;
     }
 
-    // _touchStart
+    // _touchStart — record the base timestamp first so "_hidT" event _ns
+    // deltas are measured from the moment touch input was enabled (matches
+    // pyatv, which sets its base just before sending _touchStart).
+    g_session.touch_base_ns = (uint64_t)esp_timer_get_time() * 1000ULL;
     len = opack_touchstart(buf, sizeof(buf), g_session.xid++);
     if (!len || !send_recv_opack(c, buf, len)) {
         omote_log_e("%s: _touchStart failed\r\n", TAG); return false;
@@ -1403,6 +1503,83 @@ static bool run_session_setup(WiFiClient& c) {
 
     omote_log_i("%s: session setup complete\r\n", TAG);
     return true;
+}
+
+// ---------------------------------------------------------------------------
+// Section 12b: HID button / touch actions
+// ---------------------------------------------------------------------------
+
+// Tuning for the swipe interpolation and the kill-app macro.
+#define SWIPE_STEP_MS         16   // interval between interpolated hold events
+#define DOUBLE_PRESS_GAP_MS   80   // gap between the two Home presses
+#define SWITCHER_SETTLE_MS  1000   // wait for the app-switcher animation
+
+// Press and release a single HID button. Each half is a request, so we read
+// the ATV's response to keep the receive counter aligned.
+static bool do_hid_press(WiFiClient& c, uint8_t hidCommand) {
+    uint8_t buf[128];
+    size_t  len;
+
+    len = opack_hidc(buf, sizeof(buf), hidCommand, HID_BTN_DOWN, g_session.xid++);
+    if (!len || !send_recv_opack(c, buf, len)) {
+        omote_log_e("%s: HID %u down failed\r\n", TAG, hidCommand); return false;
+    }
+    len = opack_hidc(buf, sizeof(buf), hidCommand, HID_BTN_UP, g_session.xid++);
+    if (!len || !send_recv_opack(c, buf, len)) {
+        omote_log_e("%s: HID %u up failed\r\n", TAG, hidCommand); return false;
+    }
+    return true;
+}
+
+// Emit one "_hidT" touch event with an _ns timestamp relative to session base.
+static bool do_touch_event(WiFiClient& c, uint16_t x, uint16_t y, uint8_t phase) {
+    uint8_t  buf[128];
+    uint64_t now_ns = (uint64_t)esp_timer_get_time() * 1000ULL;
+    uint64_t delta  = now_ns - g_session.touch_base_ns;
+    size_t   len    = opack_hidt(buf, sizeof(buf), x, y, phase, delta, g_session.xid++);
+    if (!len) return false;
+    // Touch events (_t:1) are fire-and-forget; the ATV sends no response.
+    return send_encrypted(c, FT_E_OPACK, buf, len);
+}
+
+// Perform a swipe from (sx,sy) to (ex,ey) over dur_ms. Mirrors pyatv's
+// interpolation: a Press, then time-proportional Hold events, then a Release.
+static bool do_swipe(WiFiClient& c, uint16_t sx, uint16_t sy,
+                      uint16_t ex, uint16_t ey, uint16_t dur_ms) {
+    omote_log_i("%s: swipe (%u,%u)->(%u,%u) over %ums\r\n", TAG, sx, sy, ex, ey, dur_ms);
+
+    if (!do_touch_event(c, sx, sy, TOUCH_PRESS)) return false;
+
+    int64_t end_us = esp_timer_get_time() + (int64_t)dur_ms * 1000;
+    double  x = sx, y = sy;
+    int64_t cur_us = esp_timer_get_time();
+    while (cur_us < end_us) {
+        double remaining_us = (double)(end_us - cur_us);
+        double frac = ((double)SWIPE_STEP_MS * 1000.0) / remaining_us;
+        x += ((double)ex - x) * frac;
+        y += ((double)ey - y) * frac;
+        if (x < 0)    x = 0;    if (x > 1000) x = 1000;
+        if (y < 0)    y = 0;    if (y > 1000) y = 1000;
+        if (!do_touch_event(c, (uint16_t)x, (uint16_t)y, TOUCH_HOLD)) return false;
+        vTaskDelay(pdMS_TO_TICKS(SWIPE_STEP_MS));
+        cur_us = esp_timer_get_time();
+    }
+    return do_touch_event(c, ex, ey, TOUCH_RELEASE);
+}
+
+// Force-quit the foreground app: double-press Home to open the app switcher,
+// wait for the animation, then swipe up on the highlighted card to dismiss it.
+static bool do_kill_app(WiFiClient& c) {
+    omote_log_i("%s: kill app: opening app switcher (double Home)\r\n", TAG);
+    if (!do_hid_press(c, HID_HOME)) return false;
+    vTaskDelay(pdMS_TO_TICKS(DOUBLE_PRESS_GAP_MS));
+    if (!do_hid_press(c, HID_HOME)) return false;
+
+    vTaskDelay(pdMS_TO_TICKS(SWITCHER_SETTLE_MS));
+
+    omote_log_i("%s: kill app: swiping up to dismiss foreground app\r\n", TAG);
+    // Swipe up: from low-centre (y=750) to near the top (y=150). y=0 is top.
+    return do_swipe(c, 500, 750, 500, 150, 350);
 }
 
 // ---------------------------------------------------------------------------
@@ -1484,25 +1661,38 @@ static void companion_task(void* pvParameters) {
             break;
 
         case ST_READY: {
-            char bundle_id[CMD_BUNDLE_MAX];
+            CompanionCmd cmd;
             // Drain command queue
-            while (xQueueReceive(g_cmd_queue, bundle_id, 0) == pdTRUE) {
-                omote_log_i("%s: launching app '%s'\r\n", TAG, bundle_id);
-                uint8_t buf[512];
-                size_t  len = opack_launchapp(buf, sizeof(buf), bundle_id, g_session.xid++);
-                if (len) {
-                    if (!send_encrypted(g_client, FT_E_OPACK, buf, len)) {
-                        omote_log_e("%s: launchApp send failed\r\n", TAG);
-                        g_connected = false;
-                        g_client.stop();
-                        state = ST_CONNECTING;
-                        break;
-                    }
-                    // Read and discard response
-                    uint8_t rtype;
-                    uint8_t rbuf[RECV_BUF_SIZE];
-                    size_t  rlen;
-                    recv_decrypted(g_client, &rtype, rbuf, sizeof(rbuf), &rlen);
+            while (xQueueReceive(g_cmd_queue, &cmd, 0) == pdTRUE) {
+                bool ok = true;
+                switch (cmd.type) {
+                case CCMD_LAUNCH: {
+                    omote_log_i("%s: launching app '%s'\r\n", TAG, cmd.bundle);
+                    uint8_t buf[512];
+                    size_t  len = opack_launchapp(buf, sizeof(buf), cmd.bundle, g_session.xid++);
+                    ok = len && send_recv_opack(g_client, buf, len);
+                    break;
+                }
+                case CCMD_HID:
+                    omote_log_i("%s: HID button %u\r\n", TAG, cmd.hid);
+                    ok = do_hid_press(g_client, cmd.hid);
+                    break;
+                case CCMD_SWIPE:
+                    ok = do_swipe(g_client, cmd.sx, cmd.sy, cmd.ex, cmd.ey, cmd.dur);
+                    break;
+                case CCMD_KILLAPP:
+                    ok = do_kill_app(g_client);
+                    break;
+                default:
+                    omote_log_w("%s: unknown command type %u\r\n", TAG, cmd.type);
+                    break;
+                }
+                if (!ok) {
+                    omote_log_e("%s: command (type %u) failed, reconnecting\r\n", TAG, cmd.type);
+                    g_connected = false;
+                    g_client.stop();
+                    state = ST_CONNECTING;
+                    break;
                 }
             }
             if (state != ST_READY) break;
@@ -1555,7 +1745,7 @@ void init_companion_HAL(void) {
         return;
     }
 
-    g_cmd_queue = xQueueCreate(CMD_QUEUE_LEN, CMD_BUNDLE_MAX);
+    g_cmd_queue = xQueueCreate(CMD_QUEUE_LEN, sizeof(CompanionCmd));
     if (!g_cmd_queue) {
         omote_log_e("%s: queue create failed\r\n", TAG);
         return;
@@ -1580,10 +1770,18 @@ void companion_shutdown_HAL(void) {
 
 bool companion_launchApp_HAL(const std::string& bundleID) {
     if (!g_cmd_queue) return false;
-    char buf[CMD_BUNDLE_MAX];
-    strncpy(buf, bundleID.c_str(), CMD_BUNDLE_MAX - 1);
-    buf[CMD_BUNDLE_MAX - 1] = '\0';
-    return xQueueSend(g_cmd_queue, buf, 0) == pdTRUE;
+    CompanionCmd cmd = {};
+    cmd.type = CCMD_LAUNCH;
+    strncpy(cmd.bundle, bundleID.c_str(), CMD_BUNDLE_MAX - 1);
+    cmd.bundle[CMD_BUNDLE_MAX - 1] = '\0';
+    return xQueueSend(g_cmd_queue, &cmd, 0) == pdTRUE;
+}
+
+bool companion_killApp_HAL(void) {
+    if (!g_cmd_queue) return false;
+    CompanionCmd cmd = {};
+    cmd.type = CCMD_KILLAPP;
+    return xQueueSend(g_cmd_queue, &cmd, 0) == pdTRUE;
 }
 
 bool companion_isConnected_HAL(void) {

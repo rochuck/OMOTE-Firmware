@@ -8,6 +8,7 @@
 
 void init_companion_HAL(void) {}
 bool companion_launchApp_HAL(const std::string& /*bundleID*/) { return false; }
+bool companion_killApp_HAL(void) { return false; }
 bool companion_isConnected_HAL(void) { return false; }
 void companion_shutdown_HAL(void) {}
 

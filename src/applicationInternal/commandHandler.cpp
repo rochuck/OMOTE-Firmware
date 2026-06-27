@@ -320,6 +320,15 @@ executeCommandWithData(uint16_t command, commandData commandData, std::string ad
             } else {
                 omote_log_e("companion: launch FAILED to queue '%s' (not connected or queue full)\r\n", param.c_str());
             }
+        } else if (action == "killapp") {
+            omote_log_i("companion: connected=%s, force-quitting foreground app\r\n",
+                        companion_isConnected_HAL() ? "yes" : "no");
+            bool queued = companion_killApp_HAL();
+            if (queued) {
+                omote_log_i("companion: killapp queued OK\r\n");
+            } else {
+                omote_log_e("companion: killapp FAILED to queue (not connected or queue full)\r\n");
+            }
         }
         break;
     }

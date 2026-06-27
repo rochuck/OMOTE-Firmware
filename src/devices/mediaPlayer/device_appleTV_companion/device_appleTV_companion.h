@@ -23,6 +23,9 @@ extern uint16_t COMPANION_LAUNCH_IMMICH;
 // Generic launcher: pass bundle ID via additionalPayload to executeCommand()
 extern uint16_t COMPANION_LAUNCH_CUSTOM;
 
+// Force-quit the foreground app (double-press Home + swipe up in the app switcher)
+extern uint16_t COMPANION_KILL_APP;
+
 void register_device_appleTV_companion(void);
 
 #endif // ENABLE_COMPANION

@@ -17,6 +17,7 @@ uint16_t COMPANION_LAUNCH_HDHOMERUN;
 uint16_t COMPANION_LAUNCH_TSN;
 uint16_t COMPANION_LAUNCH_IMMICH;
 uint16_t COMPANION_LAUNCH_CUSTOM;
+uint16_t COMPANION_KILL_APP;
 
 void register_device_appleTV_companion(void) {
     register_command(&COMPANION_LAUNCH_NETFLIX,
@@ -59,6 +60,10 @@ void register_device_appleTV_companion(void) {
     // e.g.: executeCommand(COMPANION_LAUNCH_CUSTOM, "com.example.myapp")
     register_command(&COMPANION_LAUNCH_CUSTOM,
         makeCommandData(COMPANION, {"launch", ""}));
+
+    // Force-quit the foreground app via the app switcher.
+    register_command(&COMPANION_KILL_APP,
+        makeCommandData(COMPANION, {"killapp"}));
 }
 
 #endif // ENABLE_COMPANION

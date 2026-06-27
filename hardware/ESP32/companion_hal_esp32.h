@@ -11,6 +11,10 @@ void init_companion_HAL(void);
 // Enqueue a launch-app command (by bundle ID). Thread-safe.
 bool companion_launchApp_HAL(const std::string& bundleID);
 
+// Enqueue a "force quit foreground app" macro: double-press Home to open the
+// app switcher, then swipe up on the highlighted card. Thread-safe.
+bool companion_killApp_HAL(void);
+
 // Returns true if currently authenticated and session is alive.
 bool companion_isConnected_HAL(void);
 
