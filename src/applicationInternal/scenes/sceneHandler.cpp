@@ -19,13 +19,16 @@ void setLabelActiveScene() {
 }
 
 // Called once per second from the main loop. Alternates the top-center label
-// between the active scene name and the wall-clock time (24h HH:MM). When no time
-// is available yet (blaster unreachable / NTP not synced) it always shows the
-// scene name, so there is no placeholder and no stale alternation.
+// between the active scene name and the wall-clock time (24h HH:MM), holding each
+// for 2 seconds. When no time is available yet (blaster unreachable / NTP not
+// synced) it always shows the scene name, so there is no placeholder and no stale
+// alternation.
 void setSceneLabelAlternating() {
 #if (ENABLE_WIFI_AND_MQTT == 1)
   static bool showTime = false;
-  showTime = !showTime;
+  static bool secondTick = false;
+  secondTick = !secondTick;
+  if (secondTick) {showTime = !showTime;}  // flip every 2 seconds
   char buf[6];  // "HH:MM" + NUL
   if (showTime && clockTime_valid() && clockTime_formatHHMM(buf, sizeof(buf))) {
     if (SceneLabel != NULL) {lv_label_set_text(SceneLabel, buf);}
