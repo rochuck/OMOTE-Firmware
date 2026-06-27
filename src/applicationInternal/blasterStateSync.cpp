@@ -389,23 +389,34 @@ void blasterStateSync_loop() {
             s_apply_have_epoch = false;
         }
         bool is_boot_sync = !s_first_sync_done;
-        if (s_local_changed_during_fetch) {
-            // User touched the device while the fetch was in flight; their
-            // change wins and has already been queued for POST below.
-            omote_log_d("[blasterSync] local change during fetch — skip apply\r\n");
-        } else if (s_apply_valid) {
+        // On the first sync after boot the blaster is authoritative: a remote
+        // that just woke from deep sleep must adopt whatever scene the blaster
+        // holds (e.g. "Off", set by the inactivity auto-off while we slept)
+        // rather than its own NVS-restored scene. So during boot-sync we ignore
+        // s_local_changed_during_fetch and let a valid blaster snapshot win.
+        // The flag is reset when the fetch spawns (start_fetch_async), so during
+        // boot it reflects the GUI replaying NVS state as it builds tabs, not
+        // genuine user input — letting that veto the apply is what left some
+        // remotes stuck on the pre-sleep scene. After boot, a real local change
+        // still vetoes the (periodic-poll) apply as before.
+        if (s_apply_valid && (is_boot_sync || !s_local_changed_during_fetch)) {
             // apply_remote_state is a no-op (returns false, no log) when the
             // blaster's snapshot already matches local — the common case for
             // the periodic poll.
             if (apply_remote_state()) {
-                // Our state was just rewritten from the blaster; suppress
-                // any POST that would just echo it back.
+                // Our state was just rewritten from the blaster; suppress any
+                // POST (including the boot reconcile of our now-stale scene)
+                // that would just echo the old state back and clobber Off.
                 s_post_pending = false;
             }
+        } else if (s_local_changed_during_fetch) {
+            // Post-boot: user touched the device while the fetch was in flight;
+            // their change wins and has already been queued for POST below.
+            omote_log_d("[blasterSync] local change during fetch — skip apply\r\n");
         } else if (is_boot_sync) {
-            // Blaster was cold on boot. Push our local NVS-restored state up
-            // so it becomes the source of truth from now on. Automatic, so
-            // flag it as reconcile — don't reset the blaster's auto-off timer.
+            // Blaster was cold on boot (no valid state). Push our local
+            // NVS-restored state up so it becomes the source of truth from now
+            // on. Automatic, so flag it as reconcile — don't reset the timer.
             s_post_pending      = true;
             s_post_is_reconcile = true;
             s_post_due_ms       = millis();
